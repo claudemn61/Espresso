@@ -93,6 +93,9 @@
 
   .trend { background: var(--surface-2); border-radius: 14px; padding: 12px 12px 6px; }
   .trend svg { width: 100%; height: auto; display: block; }
+  .editbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--surface-2); border: 1px solid var(--crema); border-radius: 12px; padding: 8px 8px 8px 14px; font-weight: 700; }
+  .editbar[hidden] { display: none; }
+  .shot.editing { outline: 2px solid var(--crema); }
   .axis { display: flex; align-items: center; gap: 8px; margin: 0 0 8px 4px; }
   .chip.small { min-height: 32px; padding: 5px 12px; font-size: 13px; }
   .trend .cap { font-size: 13px; color: var(--muted); margin: 0 0 4px 4px; }
@@ -177,6 +180,7 @@
 
   <section class="card" aria-labelledby="newTitle">
     <div class="card-head"><h2 id="newTitle">Neuer Bezug</h2></div>
+    <div class="editbar" id="editBar" hidden><span id="editText"></span><button type="button" class="btn small" id="cancelEdit">Abbrechen</button></div>
 
     <div class="ratio" aria-live="polite">
       <div class="ratio-num" id="ratioNum">1 : <span id="ratioVal">–</span></div>
@@ -226,7 +230,7 @@
         <textarea id="note" placeholder="Temperatur, Tamp, Eindruck"></textarea>
       </div>
       <div class="field wide">
-        <button type="submit" class="btn primary">Bezug speichern</button>
+        <button type="submit" class="btn primary" id="submitBtn">Bezug speichern</button>
       </div>
     </form>
   </section>
@@ -301,6 +305,7 @@
   var shots = load() || seed();
   var taste = "";
   var armedDelete = null;
+  var editId = null;
 
   function ratio(dose, y) { return dose > 0 && y > 0 ? y / dose : null; }
   function timeClass(t) {
@@ -450,7 +455,7 @@
       var r = ratio(s.dose, s.yld);
       var tc = timeClass(s.time);
       var armed = armedDelete === s.id;
-      return '<li class="shot" data-id="' + esc(s.id) + '">' +
+      return '<li class="shot' + (editId === s.id ? " editing" : "") + '" data-id="' + esc(s.id) + '">' +
         '<div class="shot-top"><span class="shot-bean"><span class="shot-nr" aria-label="Nummer ' + nr[s.id] + '">' + nr[s.id] + '</span>' + esc(s.bean || "Ohne Bohnenname") + '</span><span class="shot-date">' + esc(fmtDate(s.date)) + "</span></div>" +
         '<div class="shot-nums">' +
         "<span>Mahlgrad <b>" + esc(s.grind || "–") + "</b></span>" +
@@ -461,6 +466,7 @@
         "<div>" + (s.taste ? '<span class="pill t-' + esc(s.taste) + '">' + esc(s.taste) + "</span> " : "") + (s.ex ? '<span class="pill ex">Beispiel</span>' : "") + "</div>" +
         (s.note ? '<p class="shot-note">' + esc(s.note) + "</p>" : "") +
         '<div class="shot-actions">' +
+        (s.ex ? "" : '<button type="button" class="btn small" data-act="edit">Bearbeiten</button>') +
         '<button type="button" class="btn small" data-act="reuse">Als Vorlage</button>' +
         '<button type="button" class="btn small" data-act="del">' + (armed ? "Wirklich löschen?" : "Löschen") + "</button></div></li>";
     }).join("");
@@ -506,6 +512,33 @@
     }
   });
 
+  function endEdit() {
+    editId = null;
+    $("editBar").hidden = true;
+    $("submitBtn").textContent = "Bezug speichern";
+  }
+  function startEdit(s) {
+    editId = s.id;
+    $("date").value = s.date || today();
+    $("bean").value = s.bean || "";
+    $("grind").value = s.grind || "";
+    $("dose").value = s.dose == null ? "" : s.dose;
+    $("yield").value = s.yld == null ? "" : s.yld;
+    $("time").value = s.time == null ? "" : s.time;
+    $("note").value = s.note || "";
+    setTaste(s.taste || "");
+    $("editText").textContent = "Bearbeite Nr. " + numbers()[s.id];
+    $("editBar").hidden = false;
+    $("submitBtn").textContent = "Änderung speichern";
+    updateLive(); renderList();
+    $("newTitle").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  $("cancelEdit").addEventListener("click", function () {
+    endEdit();
+    $("date").value = today(); $("time").value = ""; $("note").value = ""; setTaste("");
+    updateLive(); renderList();
+  });
+
   $("form").addEventListener("submit", function (e) {
     e.preventDefault();
     var entry = {
@@ -519,15 +552,27 @@
       taste: taste,
       note: $("note").value.trim()
     };
-    shots = shots.filter(function (s) { return !s.ex; });
-    shots.push(entry);
+    var msg = "Bezug gespeichert.";
+    var focusId = entry.id;
+    var target = editId ? shots.filter(function (s) { return s.id === editId; })[0] : null;
+    if (target) {
+      entry.id = target.id; focusId = target.id;
+      Object.keys(entry).forEach(function (k) { target[k] = entry[k]; });
+      msg = "Änderung gespeichert.";
+      endEdit();
+    } else {
+      shots = shots.filter(function (s) { return !s.ex; });
+      shots.push(entry);
+    }
     persist();
     // Bohne, Mahlgrad und Mengen bleiben für den nächsten Versuch stehen
     $("time").value = ""; $("note").value = ""; setTaste("");
     updateLive(); renderAll();
     var st = $("status");
-    st.textContent = "Bezug gespeichert.";
-    setTimeout(function () { if (st.textContent === "Bezug gespeichert.") st.textContent = ""; }, 2500);
+    st.textContent = msg;
+    setTimeout(function () { if (st.textContent === msg) st.textContent = ""; }, 2500);
+    var li = document.querySelector('.shot[data-id="' + focusId + '"]');
+    if (li && msg.indexOf("Änderung") === 0) li.scrollIntoView({ behavior: "smooth", block: "center" });
   });
 
   $("list").addEventListener("click", function (e) {
@@ -537,6 +582,7 @@
     var id = li.getAttribute("data-id");
     var s = shots.filter(function (x) { return String(x.id) === id; })[0];
     if (!s) return;
+    if (btn.getAttribute("data-act") === "edit") { startEdit(s); return; }
     if (btn.getAttribute("data-act") === "reuse") {
       $("bean").value = s.ex ? "" : s.bean || "";
       $("grind").value = s.grind || "";
@@ -548,6 +594,7 @@
       $("grind").focus();
     } else if (armedDelete === id) {
       armedDelete = null;
+      if (editId === id) endEdit();
       shots = shots.filter(function (x) { return String(x.id) !== id; });
       persist(); renderAll();
     } else {
