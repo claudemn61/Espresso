@@ -263,8 +263,9 @@
   <footer>
     <p>Zielzeit 25–30 s. Zu schnell: feiner mahlen. Zu langsam: gröber mahlen.</p>
     <details class="changelog">
-      <summary>Version 1.8 · Änderungen anzeigen</summary>
+      <summary>Version 1.9 · Änderungen anzeigen</summary>
       <ul>
+        <li><b>1.9</b> Grafik: Nummer steht neben dem Punkt statt darüber</li>
         <li><b>1.8</b> Versionsnummer und Änderungsprotokoll</li>
         <li><b>1.7</b> App lädt beim Öffnen zuerst die neueste Version</li>
         <li><b>1.6</b> Mahlgrad und Mahlkonus nur ganze Zahlen, ganzzahlige Achse in der Grafik</li>
@@ -423,8 +424,8 @@
       var step = range <= 8 ? 1 : range <= 16 ? 2 : range <= 40 ? 5 : 10;
       for (var t = Math.ceil(gmin / step) * step; t <= gmax + 1e-9; t += step) ticks.push(t);
     }
-    var PAD = 10;
-    function gx(g) { return L + PAD + (W - L - R - 2 * PAD) * ((g - gmin) / (gmax - gmin)); }
+    var PADL = 10, PADR = 24;
+    function gx(g) { return L + PADL + (W - L - R - PADL - PADR) * ((g - gmin) / (gmax - gmin)); }
     function x(s, i) {
       return isGrind ? gx(gv(s)) : L + (W - L - R) * (i / (data.length - 1));
     }
@@ -446,7 +447,7 @@
       labels = ticks.map(function (t) {
         return '<text x="' + gx(t).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="11" fill="var(--text)">' + t + "</text>";
       }).join("") + data.map(function (s, i) {
-        return '<text x="' + x(s, i).toFixed(1) + '" y="' + (y(s.time) - 9).toFixed(1) + '" text-anchor="middle" font-size="10" fill="var(--muted)">' + nr[s.id] + "</text>";
+        return '<text x="' + (x(s, i) + 9).toFixed(1) + '" y="' + (y(s.time) + 4).toFixed(1) + '" text-anchor="start" font-size="11" fill="var(--text)">' + nr[s.id] + "</text>";
       }).join("");
     } else {
       labels = data.map(function (s, i) {
@@ -462,7 +463,7 @@
       '<text x="' + (L - 6) + '" y="' + (y(25) + 4).toFixed(1) + '" text-anchor="end" font-size="11" fill="var(--muted)">25</text>' +
       line + dots + labels + "</svg>";
     box.innerHTML = ctrl + '<p class="cap">Bezugszeit in s, Zielband 25–30 s. ' +
-      (isGrind ? "Unten: " + axisName + ". Zahl am Punkt: Nr. im Verlauf." : "Unten: Nr. im Verlauf.") + "</p>" + svg;
+      (isGrind ? "Unten: " + axisName + ". Zahl neben dem Punkt: Nr. im Verlauf." : "Unten: Nr. im Verlauf.") + "</p>" + svg;
   }
 
   $("trend").addEventListener("click", function (e) {
