@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Espresso Log</title>
+<meta name="theme-color" content="#1b120d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Espresso">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* Plan: dunkle Espresso-Tasse als Welt, Crema-Gold als einziger Akzent, Milchschaum für Text.
+     Layout: eine Spalte, Formular oben, Verlauf darunter. Mobile first. */
+  :root {
+    --bg: #1b120d;
+    --surface: #2a1c14;
+    --surface-2: #36251a;
+    --line: #4b3527;
+    --text: #f4e8d6;
+    --muted: #b79c84;
+    --crema: #d9a04a;
+    --crema-ink: #2a1a0c;
+    --good: #93c47d;
+    --near: #e5b85c;
+    --off: #e5806a;
+    --display: "Fraunces", Georgia, "Times New Roman", serif;
+    --body: "DM Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.45;
+    -webkit-text-size-adjust: 100%;
+    padding: max(20px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(32px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    background-image: radial-gradient(120% 60% at 50% -10%, #3a2618 0%, var(--bg) 60%);
+    background-repeat: no-repeat;
+  }
+  main { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+  h1, h2 { font-family: var(--display); font-weight: 700; margin: 0; text-wrap: balance; }
+  h1 { font-size: 28px; letter-spacing: -0.01em; }
+  h2 { font-size: 20px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 2px; }
+  header p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+  .count { font-family: var(--display); color: var(--crema); font-size: 14px; text-align: right; }
+
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+  .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+
+  .ratio { display: flex; align-items: center; justify-content: space-between; gap: 16px; background: var(--surface-2); border-radius: 14px; padding: 14px 16px; }
+  .ratio-num { font-family: var(--display); font-size: 40px; line-height: 1; font-variant-numeric: tabular-nums; }
+  .ratio-num small { font-size: 16px; color: var(--muted); font-family: var(--body); margin-left: 4px; }
+  .ratio-hint { font-size: 14px; text-align: right; color: var(--muted); max-width: 190px; }
+  .tag { display: inline-block; font-weight: 700; }
+  .good { color: var(--good); } .near { color: var(--near); } .off { color: var(--off); }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .field.wide { grid-column: 1 / -1; }
+  label, .label { font-size: 13px; color: var(--muted); font-weight: 500; }
+  input, textarea {
+    width: 100%; font: inherit; color: var(--text); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 12px; padding: 12px 12px; min-height: 46px;
+    font-variant-numeric: tabular-nums;
+  }
+  textarea { resize: vertical; min-height: 64px; }
+  input:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid var(--crema); outline-offset: 2px; }
+  input[type="date"] { appearance: none; -webkit-appearance: none; }
+
+  .time-row { display: flex; gap: 8px; }
+  .time-row input { flex: 1; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { font: inherit; font-size: 14px; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 9px 14px; min-height: 40px; cursor: pointer; }
+  .chip[aria-pressed="true"] { background: var(--crema); color: var(--crema-ink); border-color: var(--crema); font-weight: 700; }
+
+  .btn { font: inherit; font-weight: 700; border: 0; border-radius: 12px; padding: 12px 16px; min-height: 46px; cursor: pointer; background: var(--surface-2); color: var(--text); border: 1px solid var(--line); }
+  .btn.primary { background: var(--crema); color: var(--crema-ink); border-color: var(--crema); font-size: 17px; }
+  .btn.small { min-height: 38px; padding: 8px 12px; font-size: 14px; font-weight: 500; }
+  .btn.running { background: var(--off); color: #2a1008; border-color: var(--off); }
+  .btn:active { transform: translateY(1px); }
+
+  .trend { background: var(--surface-2); border-radius: 14px; padding: 12px 12px 6px; }
+  .trend svg { width: 100%; height: auto; display: block; }
+  .trend .cap { font-size: 13px; color: var(--muted); margin: 0 0 4px 4px; }
+
+  .list { display: flex; flex-direction: column; gap: 10px; list-style: none; margin: 0; padding: 0; }
+  .shot { background: var(--surface-2); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .shot-top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+  .shot-bean { font-family: var(--display); font-weight: 700; font-size: 17px; overflow-wrap: anywhere; }
+  .shot-date { color: var(--muted); font-size: 13px; white-space: nowrap; }
+  .shot-nums { display: flex; flex-wrap: wrap; gap: 6px 14px; font-variant-numeric: tabular-nums; }
+  .shot-nums span b { font-weight: 700; }
+  .pill { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); }
+  .pill.ex { color: var(--muted); font-weight: 500; }
+  .pill.t-ausgewogen { border-color: var(--good); color: var(--good); }
+  .pill.t-sauer { border-color: var(--near); color: var(--near); }
+  .pill.t-bitter, .pill.t-dünn { border-color: var(--off); color: var(--off); }
+  .shot-note { margin: 0; color: var(--muted); font-size: 14px; overflow-wrap: anywhere; }
+  .shot-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .empty { color: var(--muted); text-align: center; padding: 14px 6px; margin: 0; }
+  .export { display: flex; gap: 8px; flex-wrap: wrap; }
+  .status { min-height: 20px; font-size: 14px; color: var(--muted); margin: 0; }
+  #csvBox { display: none; font-size: 12px; min-height: 120px; }
+  footer { color: var(--muted); font-size: 13px; text-align: center; padding: 4px 8px; }
+
+  @media (prefers-reduced-motion: no-preference) { .btn, .chip { transition: background .15s, transform .1s; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>Espresso Log</h1>
+      <p>Mahlgrad, Dosis, Ausbeute, Zeit</p>
+    </div>
+    <div class="count" id="count" aria-live="polite"></div>
+  </header>
+
+  <section class="card" aria-labelledby="newTitle">
+    <div class="card-head"><h2 id="newTitle">Neuer Bezug</h2></div>
+
+    <div class="ratio" aria-live="polite">
+      <div class="ratio-num" id="ratioNum">1 : <span id="ratioVal">–</span></div>
+      <div class="ratio-hint" id="ratioHint">Dosis und Ausbeute eintragen.</div>
+    </div>
+
+    <form id="form" class="grid" autocomplete="off">
+      <div class="field">
+        <label for="date">Datum</label>
+        <input id="date" type="date" required>
+      </div>
+      <div class="field">
+        <label for="grind">Mahlgrad (Raststufe)</label>
+        <input id="grind" type="text" inputmode="decimal" placeholder="z. B. 12">
+      </div>
+      <div class="field wide">
+        <label for="bean">Bohnen</label>
+        <input id="bean" type="text" list="beans" placeholder="Sorte oder Röstung">
+        <datalist id="beans"></datalist>
+      </div>
+      <div class="field">
+        <label for="dose">Input (g)</label>
+        <input id="dose" type="text" inputmode="decimal" placeholder="18">
+      </div>
+      <div class="field">
+        <label for="yield">Output (g)</label>
+        <input id="yield" type="text" inputmode="decimal" placeholder="36">
+      </div>
+      <div class="field wide">
+        <label for="time">Zeit (s)</label>
+        <div class="time-row">
+          <input id="time" type="text" inputmode="decimal" placeholder="27">
+          <button type="button" class="btn" id="stopBtn" aria-live="polite">Stoppuhr</button>
+        </div>
+      </div>
+      <div class="field wide">
+        <span class="label" id="tasteLabel">Geschmack</span>
+        <div class="chips" role="group" aria-labelledby="tasteLabel" id="tasteChips">
+          <button type="button" class="chip" data-v="sauer" aria-pressed="false">sauer</button>
+          <button type="button" class="chip" data-v="ausgewogen" aria-pressed="false">ausgewogen</button>
+          <button type="button" class="chip" data-v="bitter" aria-pressed="false">bitter</button>
+          <button type="button" class="chip" data-v="dünn" aria-pressed="false">dünn</button>
+        </div>
+      </div>
+      <div class="field wide">
+        <label for="note">Notiz</label>
+        <textarea id="note" placeholder="Temperatur, Tamp, Eindruck"></textarea>
+      </div>
+      <div class="field wide">
+        <button type="submit" class="btn primary">Bezug speichern</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="card" aria-labelledby="histTitle">
+    <div class="card-head"><h2 id="histTitle">Verlauf</h2></div>
+    <div class="trend" id="trend"></div>
+    <ul class="list" id="list"></ul>
+  </section>
+
+  <section class="card" aria-labelledby="expTitle">
+    <div class="card-head"><h2 id="expTitle">Export</h2></div>
+    <div class="export">
+      <button type="button" class="btn small" id="copyCsv">CSV kopieren</button>
+      <button type="button" class="btn small" id="saveCsv">CSV speichern</button>
+    </div>
+    <p class="status" id="status" role="status"></p>
+    <textarea id="csvBox" readonly aria-label="CSV zum Kopieren"></textarea>
+  </section>
+
+  <footer>Zielzeit 25–30 s. Zu schnell: feiner mahlen. Zu langsam: gröber mahlen.</footer>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  var KEY = "espresso-log-v1";
+  var mem = null;
+  var $ = function (id) { return document.getElementById(id); };
+
+  function today() {
+    var d = new Date();
+    var m = String(d.getMonth() + 1).padStart(2, "0");
+    var day = String(d.getDate()).padStart(2, "0");
+    return d.getFullYear() + "-" + m + "-" + day;
+  }
+  function num(v) {
+    var n = parseFloat(String(v).replace(",", "."));
+    return isFinite(n) ? n : null;
+  }
+  function fmt(n, d) { return n == null ? "–" : n.toFixed(d == null ? 1 : d); }
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function fmtDate(iso) {
+    var p = String(iso).split("-");
+    return p.length === 3 ? p[2] + "." + p[1] + "." + p[0] : iso;
+  }
+
+  function seed() {
+    var d = today();
+    return [
+      { id: "ex1", ex: true, date: d, bean: "Beispiel: Hausmischung", grind: "10", dose: 18, yld: 36, time: 19, taste: "sauer", note: "Zu schnell, feiner mahlen." },
+      { id: "ex2", ex: true, date: d, bean: "Beispiel: Hausmischung", grind: "9", dose: 18, yld: 36, time: 27, taste: "ausgewogen", note: "Passt." },
+      { id: "ex3", ex: true, date: d, bean: "Beispiel: Hausmischung", grind: "8", dose: 18, yld: 36, time: 38, taste: "bitter", note: "Zu langsam, wieder gröber." }
+    ];
+  }
+  function load() {
+    try {
+      var r = localStorage.getItem(KEY);
+      if (r) return JSON.parse(r);
+    } catch (e) {}
+    return mem;
+  }
+  function persist() {
+    mem = shots;
+    try { localStorage.setItem(KEY, JSON.stringify(shots)); } catch (e) {}
+  }
+
+  var shots = load() || seed();
+  var taste = "";
+  var armedDelete = null;
+
+  function ratio(dose, y) { return dose > 0 && y > 0 ? y / dose : null; }
+  function timeClass(t) {
+    if (t == null) return null;
+    if (t >= 25 && t <= 30) return "good";
+    if (t >= 22 && t <= 35) return "near";
+    return "off";
+  }
+  function timeHint(t) {
+    if (t == null) return "";
+    if (t < 22) return "Zu schnell. Feiner mahlen.";
+    if (t < 25) return "Etwas schnell.";
+    if (t <= 30) return "Im Zielbereich.";
+    if (t <= 35) return "Etwas langsam.";
+    return "Zu langsam. Gröber mahlen.";
+  }
+
+  function updateLive() {
+    var r = ratio(num($("dose").value), num($("yield").value));
+    var t = num($("time").value);
+    $("ratioVal").textContent = r == null ? "–" : r.toFixed(1);
+    var hint = $("ratioHint");
+    if (t == null) {
+      hint.className = "ratio-hint";
+      hint.textContent = r == null ? "Dosis und Ausbeute eintragen." : "Zeit eintragen oder messen.";
+    } else {
+      hint.className = "ratio-hint";
+      hint.innerHTML = '<span class="tag ' + timeClass(t) + '">' + esc(fmt(t, 0)) + ' s</span><br>' + esc(timeHint(t));
+    }
+  }
+
+  function renderBeans() {
+    var seen = {};
+    shots.forEach(function (s) { if (!s.ex && s.bean) seen[s.bean] = 1; });
+    $("beans").innerHTML = Object.keys(seen).map(function (b) { return '<option value="' + esc(b) + '">'; }).join("");
+  }
+
+  function renderTrend() {
+    var data = shots.slice().sort(function (a, b) {
+      return a.date === b.date ? 0 : a.date < b.date ? -1 : 1;
+    }).filter(function (s) { return s.time != null; }).slice(-12);
+    var box = $("trend");
+    if (data.length < 2) {
+      box.innerHTML = '<p class="cap">Bezugszeit je Bezug (mindestens zwei Einträge nötig)</p>';
+      return;
+    }
+    var W = 320, H = 130, L = 30, R = 10, T = 10, B = 18;
+    var lo = Math.min(15, Math.min.apply(null, data.map(function (s) { return s.time; })) - 2);
+    var hi = Math.max(40, Math.max.apply(null, data.map(function (s) { return s.time; })) + 2);
+    function y(v) { return T + (H - T - B) * (1 - (v - lo) / (hi - lo)); }
+    function x(i) { return L + (W - L - R) * (data.length === 1 ? 0.5 : i / (data.length - 1)); }
+    var pts = data.map(function (s, i) { return x(i).toFixed(1) + "," + y(s.time).toFixed(1); }).join(" ");
+    var dots = data.map(function (s, i) {
+      var c = timeClass(s.time);
+      var col = c === "good" ? "var(--good)" : c === "near" ? "var(--near)" : "var(--off)";
+      return '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(s.time).toFixed(1) + '" r="4" fill="' + col + '" stroke="var(--surface-2)" stroke-width="1.5"/>';
+    }).join("");
+    var last = data[data.length - 1];
+    var svg =
+      '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Bezugszeiten der letzten ' + data.length + ' Bezüge">' +
+      '<rect x="' + L + '" y="' + y(30).toFixed(1) + '" width="' + (W - L - R) + '" height="' + (y(25) - y(30)).toFixed(1) + '" fill="var(--good)" opacity="0.18"/>' +
+      '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(30).toFixed(1) + '" y2="' + y(30).toFixed(1) + '" stroke="var(--line)" stroke-dasharray="3 3"/>' +
+      '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(25).toFixed(1) + '" y2="' + y(25).toFixed(1) + '" stroke="var(--line)" stroke-dasharray="3 3"/>' +
+      '<text x="' + (L - 6) + '" y="' + (y(30) + 4).toFixed(1) + '" text-anchor="end" font-size="11" fill="var(--muted)">30</text>' +
+      '<text x="' + (L - 6) + '" y="' + (y(25) + 4).toFixed(1) + '" text-anchor="end" font-size="11" fill="var(--muted)">25</text>' +
+      '<polyline points="' + pts + '" fill="none" stroke="var(--crema)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>' +
+      dots +
+      '<text x="' + (W - R) + '" y="' + (H - 3) + '" text-anchor="end" font-size="11" fill="var(--muted)">letzter Bezug: ' + fmt(last.time, 0) + ' s</text>' +
+      "</svg>";
+    box.innerHTML = '<p class="cap">Bezugszeit in s, Zielband 25–30 s</p>' + svg;
+  }
+
+  function renderList() {
+    var ul = $("list");
+    var sorted = shots.slice().sort(function (a, b) {
+      if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+      return String(b.id).localeCompare(String(a.id));
+    });
+    if (!sorted.length) {
+      ul.innerHTML = '<li class="empty">Noch kein Bezug gespeichert.</li>';
+      return;
+    }
+    ul.innerHTML = sorted.map(function (s) {
+      var r = ratio(s.dose, s.yld);
+      var tc = timeClass(s.time);
+      var armed = armedDelete === s.id;
+      return '<li class="shot" data-id="' + esc(s.id) + '">' +
+        '<div class="shot-top"><span class="shot-bean">' + esc(s.bean || "Ohne Bohnenname") + '</span><span class="shot-date">' + esc(fmtDate(s.date)) + "</span></div>" +
+        '<div class="shot-nums">' +
+        "<span>Mahlgrad <b>" + esc(s.grind || "–") + "</b></span>" +
+        "<span><b>" + fmt(s.dose) + "</b> g rein</span>" +
+        "<span><b>" + fmt(s.yld) + "</b> g raus</span>" +
+        '<span class="' + (tc || "") + '"><b>' + fmt(s.time, 0) + "</b> s</span>" +
+        "<span>1 : <b>" + (r == null ? "–" : r.toFixed(1)) + "</b></span></div>" +
+        "<div>" + (s.taste ? '<span class="pill t-' + esc(s.taste) + '">' + esc(s.taste) + "</span> " : "") + (s.ex ? '<span class="pill ex">Beispiel</span>' : "") + "</div>" +
+        (s.note ? '<p class="shot-note">' + esc(s.note) + "</p>" : "") +
+        '<div class="shot-actions">' +
+        '<button type="button" class="btn small" data-act="reuse">Als Vorlage</button>' +
+        '<button type="button" class="btn small" data-act="del">' + (armed ? "Wirklich löschen?" : "Löschen") + "</button></div></li>";
+    }).join("");
+  }
+
+  function renderAll() {
+    var real = shots.filter(function (s) { return !s.ex; }).length;
+    $("count").textContent = real === 1 ? "1 Bezug" : real + " Bezüge";
+    renderBeans(); renderTrend(); renderList();
+  }
+
+  function setTaste(v) {
+    taste = v;
+    Array.prototype.forEach.call(document.querySelectorAll("#tasteChips .chip"), function (b) {
+      b.setAttribute("aria-pressed", b.getAttribute("data-v") === v ? "true" : "false");
+    });
+  }
+
+  $("tasteChips").addEventListener("click", function (e) {
+    var b = e.target.closest(".chip");
+    if (!b) return;
+    setTaste(taste === b.getAttribute("data-v") ? "" : b.getAttribute("data-v"));
+  });
+  ["dose", "yield", "time"].forEach(function (id) { $(id).addEventListener("input", updateLive); });
+
+  /* Stoppuhr */
+  var sw = { t0: 0, timer: null };
+  $("stopBtn").addEventListener("click", function () {
+    var btn = $("stopBtn");
+    if (sw.timer) {
+      clearInterval(sw.timer); sw.timer = null;
+      var secs = (Date.now() - sw.t0) / 1000;
+      $("time").value = secs.toFixed(0);
+      btn.textContent = "Stoppuhr"; btn.classList.remove("running");
+      updateLive();
+    } else {
+      sw.t0 = Date.now();
+      btn.classList.add("running");
+      btn.textContent = "0.0 s, stoppen";
+      sw.timer = setInterval(function () {
+        btn.textContent = ((Date.now() - sw.t0) / 1000).toFixed(1) + " s, stoppen";
+      }, 100);
+    }
+  });
+
+  $("form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var entry = {
+      id: String(Date.now()),
+      date: $("date").value || today(),
+      bean: $("bean").value.trim(),
+      grind: $("grind").value.trim(),
+      dose: num($("dose").value),
+      yld: num($("yield").value),
+      time: num($("time").value),
+      taste: taste,
+      note: $("note").value.trim()
+    };
+    shots = shots.filter(function (s) { return !s.ex; });
+    shots.push(entry);
+    persist();
+    // Bohne, Mahlgrad und Mengen bleiben für den nächsten Versuch stehen
+    $("time").value = ""; $("note").value = ""; setTaste("");
+    updateLive(); renderAll();
+    var st = $("status");
+    st.textContent = "Bezug gespeichert.";
+    setTimeout(function () { if (st.textContent === "Bezug gespeichert.") st.textContent = ""; }, 2500);
+  });
+
+  $("list").addEventListener("click", function (e) {
+    var btn = e.target.closest("button[data-act]");
+    if (!btn) return;
+    var li = btn.closest(".shot");
+    var id = li.getAttribute("data-id");
+    var s = shots.filter(function (x) { return String(x.id) === id; })[0];
+    if (!s) return;
+    if (btn.getAttribute("data-act") === "reuse") {
+      $("bean").value = s.ex ? "" : s.bean || "";
+      $("grind").value = s.grind || "";
+      $("dose").value = s.dose == null ? "" : s.dose;
+      $("yield").value = s.yld == null ? "" : s.yld;
+      $("time").value = ""; $("note").value = ""; setTaste("");
+      updateLive();
+      $("grind").scrollIntoView({ behavior: "smooth", block: "center" });
+      $("grind").focus();
+    } else if (armedDelete === id) {
+      armedDelete = null;
+      shots = shots.filter(function (x) { return String(x.id) !== id; });
+      persist(); renderAll();
+    } else {
+      armedDelete = id; renderList();
+      setTimeout(function () { if (armedDelete === id) { armedDelete = null; renderList(); } }, 3500);
+    }
+  });
+
+  /* Export */
+  function csv() {
+    var head = ["Datum", "Bohnen", "Mahlgrad", "Input_g", "Output_g", "Zeit_s", "Verhaeltnis", "Geschmack", "Notiz"];
+    function cell(v) { return '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"'; }
+    var rows = shots.filter(function (s) { return !s.ex; }).sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; }).map(function (s) {
+      var r = ratio(s.dose, s.yld);
+      return [s.date, s.bean, s.grind, s.dose, s.yld, s.time, r == null ? "" : r.toFixed(2), s.taste, s.note].map(cell).join(";");
+    });
+    return [head.join(";")].concat(rows).join("\n");
+  }
+  function say(t) { $("status").textContent = t; }
+  $("copyCsv").addEventListener("click", function () {
+    var text = csv();
+    var ok = navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(text) : Promise.reject();
+    ok.then(function () { say("CSV in die Zwischenablage kopiert."); }).catch(function () {
+      var box = $("csvBox"); box.style.display = "block"; box.value = text; box.focus(); box.select();
+      say("Text markiert. Mit Kopieren übernehmen.");
+    });
+  });
+  $("saveCsv").addEventListener("click", function () {
+    try {
+      var blob = new Blob(["﻿" + csv()], { type: "text/csv;charset=utf-8" });
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob); a.download = "espresso-log.csv";
+      document.body.appendChild(a); a.click(); a.remove();
+      say("CSV wird gespeichert.");
+    } catch (e) { say("Speichern nicht möglich. Bitte CSV kopieren."); }
+  });
+
+  $("date").value = today();
+  updateLive(); renderAll();
+
+  if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
+    window.addEventListener("load", function () {
+      try { navigator.serviceWorker.register("sw.js").catch(function () {}); } catch (e) {}
+    });
+  }
+})();
+</script>
+</body>
+</html>
