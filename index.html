@@ -193,13 +193,17 @@
         <input id="date" type="date" required>
       </div>
       <div class="field">
-        <label for="grind">Mahlgrad (Raststufe)</label>
-        <input id="grind" type="text" inputmode="decimal" placeholder="z. B. 12">
-      </div>
-      <div class="field wide">
         <label for="bean">Bohnen</label>
         <input id="bean" type="text" list="beans" placeholder="Sorte oder Röstung">
         <datalist id="beans"></datalist>
+      </div>
+      <div class="field">
+        <label for="grind">Mahlgrad (Raststufe)</label>
+        <input id="grind" type="text" inputmode="decimal" placeholder="z. B. 12">
+      </div>
+      <div class="field">
+        <label for="burr">Mahlkonus-Einstellung</label>
+        <input id="burr" type="text" inputmode="decimal" placeholder="z. B. 2,5">
       </div>
       <div class="field">
         <label for="dose">Input (g)</label>
@@ -358,23 +362,27 @@
 
   var AXIS_KEY = KEY + "-axis";
   var axis = "nr";
-  try { axis = localStorage.getItem(AXIS_KEY) === "grind" ? "grind" : "nr"; } catch (e) {}
+  try { var a = localStorage.getItem(AXIS_KEY); axis = a === "grind" || a === "burr" ? a : "nr"; } catch (e) {}
 
   function renderTrend() {
     var nr = numbers();
     var box = $("trend");
-    var isGrind = axis === "grind";
+    var isGrind = axis !== "nr";
+    var gkey = axis === "burr" ? "burr" : "grind";
+    var axisName = axis === "burr" ? "Mahlkonus" : "Mahlgrad";
+    function gv(s) { return num(s[gkey]); }
     var ctrl =
       '<div class="axis" role="group" aria-label="X-Achse wählen"><span class="label">X-Achse</span>' +
       '<button type="button" class="chip small" data-axis="nr" aria-pressed="' + (!isGrind) + '">Nr.</button>' +
-      '<button type="button" class="chip small" data-axis="grind" aria-pressed="' + isGrind + '">Mahlgrad</button></div>';
+      '<button type="button" class="chip small" data-axis="grind" aria-pressed="' + (axis === "grind") + '">Mahlgrad</button>' +
+      '<button type="button" class="chip small" data-axis="burr" aria-pressed="' + (axis === "burr") + '">Mahlkonus</button></div>';
     var all = chrono().filter(function (s) { return s.time != null; });
     var data = isGrind
-      ? all.filter(function (s) { return num(s.grind) != null; }).slice(-60)
+      ? all.filter(function (s) { return gv(s) != null; }).slice(-60)
       : all.slice(-12);
     if (data.length < 2) {
       box.innerHTML = ctrl + '<p class="cap">' + (isGrind
-        ? "Für diese Ansicht braucht es mindestens zwei Bezüge mit Mahlgrad und Zeit."
+        ? "Für diese Ansicht braucht es mindestens zwei Bezüge mit " + axisName + " und Zeit."
         : "Bezugszeit je Bezug (mindestens zwei Einträge nötig)") + "</p>";
       return;
     }
@@ -386,7 +394,7 @@
 
     var gmin = 0, gmax = 1, ticks = [];
     if (isGrind) {
-      var gs = data.map(function (s) { return num(s.grind); });
+      var gs = data.map(function (s) { return gv(s); });
       gmin = Math.min.apply(null, gs); gmax = Math.max.apply(null, gs);
       if (gmax === gmin) { gmin -= 1; gmax += 1; }
       var range = gmax - gmin;
@@ -396,7 +404,7 @@
     var PAD = 10;
     function gx(g) { return L + PAD + (W - L - R - 2 * PAD) * ((g - gmin) / (gmax - gmin)); }
     function x(s, i) {
-      return isGrind ? gx(num(s.grind)) : L + (W - L - R) * (i / (data.length - 1));
+      return isGrind ? gx(gv(s)) : L + (W - L - R) * (i / (data.length - 1));
     }
     function colorOf(t) {
       var c = timeClass(t);
@@ -424,7 +432,7 @@
       }).join("");
     }
     var svg =
-      '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Bezugszeiten, X-Achse: ' + (isGrind ? "Mahlgrad" : "Nummer im Verlauf") + '">' +
+      '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Bezugszeiten, X-Achse: ' + (isGrind ? axisName : "Nummer im Verlauf") + '">' +
       '<rect x="' + L + '" y="' + y(30).toFixed(1) + '" width="' + (W - L - R) + '" height="' + (y(25) - y(30)).toFixed(1) + '" fill="var(--good)" opacity="0.18"/>' +
       '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(30).toFixed(1) + '" y2="' + y(30).toFixed(1) + '" stroke="var(--line)" stroke-dasharray="3 3"/>' +
       '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(25).toFixed(1) + '" y2="' + y(25).toFixed(1) + '" stroke="var(--line)" stroke-dasharray="3 3"/>' +
@@ -432,13 +440,13 @@
       '<text x="' + (L - 6) + '" y="' + (y(25) + 4).toFixed(1) + '" text-anchor="end" font-size="11" fill="var(--muted)">25</text>' +
       line + dots + labels + "</svg>";
     box.innerHTML = ctrl + '<p class="cap">Bezugszeit in s, Zielband 25–30 s. ' +
-      (isGrind ? "Unten: Mahlgrad. Zahl am Punkt: Nr. im Verlauf." : "Unten: Nr. im Verlauf.") + "</p>" + svg;
+      (isGrind ? "Unten: " + axisName + ". Zahl am Punkt: Nr. im Verlauf." : "Unten: Nr. im Verlauf.") + "</p>" + svg;
   }
 
   $("trend").addEventListener("click", function (e) {
     var b = e.target.closest("button[data-axis]");
     if (!b) return;
-    axis = b.getAttribute("data-axis") === "grind" ? "grind" : "nr";
+    var v = b.getAttribute("data-axis"); axis = v === "grind" || v === "burr" ? v : "nr";
     try { localStorage.setItem(AXIS_KEY, axis); } catch (err) {}
     renderTrend();
   });
@@ -459,6 +467,7 @@
         '<div class="shot-top"><span class="shot-bean"><span class="shot-nr" aria-label="Nummer ' + nr[s.id] + '">' + nr[s.id] + '</span>' + esc(s.bean || "Ohne Bohnenname") + '</span><span class="shot-date">' + esc(fmtDate(s.date)) + "</span></div>" +
         '<div class="shot-nums">' +
         "<span>Mahlgrad <b>" + esc(s.grind || "–") + "</b></span>" +
+        (s.burr ? "<span>Konus <b>" + esc(s.burr) + "</b></span>" : "") +
         "<span><b>" + fmt(s.dose) + "</b> g rein</span>" +
         "<span><b>" + fmt(s.yld) + "</b> g raus</span>" +
         '<span class="' + (tc || "") + '"><b>' + fmt(s.time, 0) + "</b> s</span>" +
@@ -521,7 +530,7 @@
     editId = s.id;
     $("date").value = s.date || today();
     $("bean").value = s.bean || "";
-    $("grind").value = s.grind || "";
+    $("grind").value = s.grind || ""; $("burr").value = s.burr || "";
     $("dose").value = s.dose == null ? "" : s.dose;
     $("yield").value = s.yld == null ? "" : s.yld;
     $("time").value = s.time == null ? "" : s.time;
@@ -546,6 +555,7 @@
       date: $("date").value || today(),
       bean: $("bean").value.trim(),
       grind: $("grind").value.trim(),
+      burr: $("burr").value.trim(),
       dose: num($("dose").value),
       yld: num($("yield").value),
       time: num($("time").value),
@@ -585,7 +595,7 @@
     if (btn.getAttribute("data-act") === "edit") { startEdit(s); return; }
     if (btn.getAttribute("data-act") === "reuse") {
       $("bean").value = s.ex ? "" : s.bean || "";
-      $("grind").value = s.grind || "";
+      $("grind").value = s.grind || ""; $("burr").value = s.burr || "";
       $("dose").value = s.dose == null ? "" : s.dose;
       $("yield").value = s.yld == null ? "" : s.yld;
       $("time").value = ""; $("note").value = ""; setTaste("");
@@ -606,11 +616,11 @@
   /* Export */
   function csv() {
     var nr = numbers();
-    var head = ["Nr", "Datum", "Bohnen", "Mahlgrad", "Input_g", "Output_g", "Zeit_s", "Verhaeltnis", "Geschmack", "Notiz"];
+    var head = ["Nr", "Datum", "Bohnen", "Mahlgrad", "Mahlkonus", "Input_g", "Output_g", "Zeit_s", "Verhaeltnis", "Geschmack", "Notiz"];
     function cell(v) { return '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"'; }
     var rows = shots.filter(function (s) { return !s.ex; }).sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; }).map(function (s) {
       var r = ratio(s.dose, s.yld);
-      return [nr[s.id], s.date, s.bean, s.grind, s.dose, s.yld, s.time, r == null ? "" : r.toFixed(2), s.taste, s.note].map(cell).join(";");
+      return [nr[s.id], s.date, s.bean, s.grind, s.burr, s.dose, s.yld, s.time, r == null ? "" : r.toFixed(2), s.taste, s.note].map(cell).join(";");
     });
     return [head.join(";")].concat(rows).join("\n");
   }
