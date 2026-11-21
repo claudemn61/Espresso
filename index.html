@@ -247,7 +247,6 @@
   <section class="card" aria-labelledby="histTitle">
     <div class="card-head"><h2 id="histTitle">Verlauf</h2></div>
     <div class="trend" id="trend"></div>
-    <div class="trend" id="multi"></div>
     <ul class="list" id="list"></ul>
   </section>
 
@@ -264,8 +263,9 @@
   <footer>
     <p>Zielzeit 25–30 s. Zu schnell: feiner mahlen. Zu langsam: gröber mahlen.</p>
     <details class="changelog">
-      <summary>Version 1.9.1 · Änderungen anzeigen</summary>
+      <summary>Version 1.9.2 · Änderungen anzeigen</summary>
       <ul>
+        <li><b>1.9.2</b> Zusatzgrafik wieder entfernt</li>
         <li><b>1.9.1</b> Zusatzgrafik: Zeit, Output und Input untereinander mit gemeinsamer X-Achse</li>
         <li><b>1.9</b> Grafik: Nummer steht neben dem Punkt statt darüber</li>
         <li><b>1.8</b> Versionsnummer und Änderungsprotokoll</li>
@@ -473,125 +473,7 @@
     if (!b) return;
     var v = b.getAttribute("data-axis"); axis = v === "grind" || v === "burr" ? v : "nr";
     try { localStorage.setItem(AXIS_KEY, axis); } catch (err) {}
-    renderTrend(); renderMulti();
-  });
-
-  /* Zusatzgrafik: Zeit, Output und Input als Streifen untereinander, gemeinsame X-Achse wie oben */
-  var MKEY = KEY + "-multi";
-  var mkey = "all";
-  try {
-    var mk = localStorage.getItem(MKEY);
-    if (mk === "time" || mk === "yld" || mk === "dose") mkey = mk;
-  } catch (e) {}
-
-  function renderMulti() {
-    var box = $("multi");
-    var isX = axis !== "nr";
-    var gkey = axis === "burr" ? "burr" : "grind";
-    var axisName = axis === "burr" ? "Mahlkonus" : axis === "grind" ? "Mahlgrad" : "Nr. im Verlauf";
-    function gv(s) { return num(s[gkey]); }
-    var nr = numbers();
-    var defs = [
-      { key: "time", name: "Zeit (s)", get: function (s) { return s.time; }, dec: 0 },
-      { key: "yld", name: "Output (g)", get: function (s) { return s.yld; }, dec: 1 },
-      { key: "dose", name: "Input (g)", get: function (s) { return s.dose; }, dec: 1 }
-    ];
-    var chips = [["all", "alle"], ["time", "Zeit"], ["yld", "Output"], ["dose", "Input"]].map(function (c) {
-      return '<button type="button" class="chip small" data-multi="' + c[0] + '" aria-pressed="' + (mkey === c[0]) + '">' + c[1] + "</button>";
-    }).join("");
-    var ctrl = '<div class="axis" role="group" aria-label="Messgrössen wählen"><span class="label">Anzeige</span>' + chips + "</div>";
-    var all = chrono();
-    var base = isX ? all.filter(function (s) { return gv(s) != null; }).slice(-60) : all.slice(-12);
-    if (base.length < 2) {
-      box.innerHTML = ctrl + '<p class="cap">Für diese Ansicht braucht es mindestens zwei Bezüge' + (isX ? " mit " + axisName : "") + ".</p>";
-      return;
-    }
-    var shown = defs.filter(function (d) { return mkey === "all" || mkey === d.key; });
-    var W = 320, L = 36, R = 10, STRIP = shown.length === 1 ? 110 : 68, B = 26, TOPPAD = 18;
-    var H = shown.length * STRIP + B;
-
-    var gmin = 0, gmax = 1, ticks = [];
-    var PADL = 10, PADR = 14;
-    if (isX) {
-      var gs = base.map(gv);
-      gmin = Math.floor(Math.min.apply(null, gs)); gmax = Math.ceil(Math.max.apply(null, gs));
-      if (gmax === gmin) { gmin -= 1; gmax += 1; }
-      var range = gmax - gmin;
-      var step = range <= 8 ? 1 : range <= 16 ? 2 : range <= 40 ? 5 : 10;
-      for (var t = Math.ceil(gmin / step) * step; t <= gmax + 1e-9; t += step) ticks.push(t);
-    }
-    function gx(g) { return L + PADL + (W - L - R - PADL - PADR) * ((g - gmin) / (gmax - gmin)); }
-    function xAt(s, i) {
-      return isX ? gx(gv(s)) : L + (W - L - R) * (i / (base.length - 1));
-    }
-
-    var parts = [];
-    shown.forEach(function (d, k) {
-      var y0 = k * STRIP;
-      var pts = [];
-      base.forEach(function (s, i) {
-        var v = d.get(s);
-        if (v != null) pts.push({ s: s, i: i, v: v });
-      });
-      parts.push('<text x="' + L + '" y="' + (y0 + 12) + '" font-size="11" font-weight="700" fill="var(--muted)">' + d.name + "</text>");
-      if (!pts.length) {
-        parts.push('<text x="' + (W / 2) + '" y="' + (y0 + STRIP / 2 + 4) + '" text-anchor="middle" font-size="11" fill="var(--muted)">keine Werte</text>');
-      } else {
-        var vs = pts.map(function (p) { return p.v; });
-        var vmin = Math.min.apply(null, vs), vmax = Math.max.apply(null, vs);
-        var lo = vmin, hi = vmax;
-        if (hi === lo) { lo -= 1; hi += 1; }
-        if (d.key === "time") { lo = Math.min(lo, 25); hi = Math.max(hi, 30); }
-        var padv = (hi - lo) * 0.12;
-        lo -= padv; hi += padv;
-        var top = y0 + TOPPAD, bot = y0 + STRIP - 8;
-        var yy = function (v) { return bot - (bot - top) * ((v - lo) / (hi - lo)); };
-        if (d.key === "time") {
-          parts.push('<rect x="' + L + '" y="' + yy(30).toFixed(1) + '" width="' + (W - L - R) + '" height="' + (yy(25) - yy(30)).toFixed(1) + '" fill="var(--good)" opacity="0.18"/>');
-        }
-        parts.push('<text x="' + (L - 6) + '" y="' + (yy(vmax) + 4).toFixed(1) + '" text-anchor="end" font-size="10" fill="var(--muted)">' + fmt(vmax, d.dec) + "</text>");
-        if (vmin !== vmax) {
-          parts.push('<text x="' + (L - 6) + '" y="' + (yy(vmin) + 4).toFixed(1) + '" text-anchor="end" font-size="10" fill="var(--muted)">' + fmt(vmin, d.dec) + "</text>");
-        }
-        if (!isX && pts.length > 1) {
-          parts.push('<polyline points="' + pts.map(function (p) {
-            return xAt(p.s, p.i).toFixed(1) + "," + yy(p.v).toFixed(1);
-          }).join(" ") + '" fill="none" stroke="var(--crema)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>');
-        }
-        pts.forEach(function (p) {
-          var col = "var(--crema)";
-          if (d.key === "time") {
-            var c = timeClass(p.v);
-            col = c === "good" ? "var(--good)" : c === "near" ? "var(--near)" : "var(--off)";
-          }
-          parts.push('<circle cx="' + xAt(p.s, p.i).toFixed(1) + '" cy="' + yy(p.v).toFixed(1) + '" r="4" fill="' + col + '" stroke="var(--surface-2)" stroke-width="1.5"/>');
-        });
-      }
-      if (k < shown.length - 1) {
-        parts.push('<line x1="' + L + '" x2="' + (W - R) + '" y1="' + (y0 + STRIP - 1) + '" y2="' + (y0 + STRIP - 1) + '" stroke="var(--line)"/>');
-      }
-    });
-
-    if (isX) {
-      ticks.forEach(function (t) {
-        parts.push('<text x="' + gx(t).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="11" fill="var(--text)">' + t + "</text>");
-      });
-    } else {
-      base.forEach(function (s, i) {
-        parts.push('<text x="' + xAt(s, i).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="11" fill="var(--text)">' + nr[s.id] + "</text>");
-      });
-    }
-    var svg = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Messgrössen untereinander, X-Achse: ' + axisName + '">' + parts.join("") + "</svg>";
-    box.innerHTML = ctrl + '<p class="cap">Messgrössen untereinander. X-Achse wie oben gewählt: ' + axisName + ". Links Minimum und Maximum.</p>" + svg;
-  }
-
-  $("multi").addEventListener("click", function (e) {
-    var b = e.target.closest("button[data-multi]");
-    if (!b) return;
-    var v = b.getAttribute("data-multi");
-    mkey = v === "time" || v === "yld" || v === "dose" ? v : "all";
-    try { localStorage.setItem(MKEY, mkey); } catch (err) {}
-    renderMulti();
+    renderTrend();
   });
 
   function renderList() {
@@ -627,7 +509,7 @@
   function renderAll() {
     var real = shots.filter(function (s) { return !s.ex; }).length;
     $("count").textContent = real === 1 ? "1 Bezug" : real + " Bezüge";
-    renderBeans(); renderTrend(); renderMulti(); renderList();
+    renderBeans(); renderTrend(); renderList();
   }
 
   function setTaste(v) {
