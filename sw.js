@@ -1,4 +1,4 @@
-const CACHE = "espresso-log-1.10";
+const CACHE = "espresso-log-1.10.1";
 const SHELL = [
   "./",
   "index.html",
@@ -21,11 +21,13 @@ self.addEventListener("activate", (e) => {
   );
 });
 
-// Netzwerk zuerst: neue Version kommt sofort, Cache dient nur als Offline-Reserve.
+// Netzwerk zuerst und beim Server nachfragen (kein HTTP-Cache), Cache nur als Offline-Reserve.
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
+  const sameOrigin = new URL(e.request.url).origin === self.location.origin;
+  const net = sameOrigin ? fetch(e.request.url, { cache: "no-cache" }) : fetch(e.request);
   e.respondWith(
-    fetch(e.request)
+    net
       .then((res) => {
         if (res && (res.ok || res.type === "opaque")) {
           const copy = res.clone();
