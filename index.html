@@ -96,7 +96,7 @@
   .editbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--surface-2); border: 1px solid var(--crema); border-radius: 12px; padding: 8px 8px 8px 14px; font-weight: 700; }
   .editbar[hidden] { display: none; }
   .shot.editing { outline: 2px solid var(--crema); }
-  .axis { display: flex; align-items: center; gap: 8px; margin: 0 0 8px 4px; }
+  .axis { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 8px 4px; }
   .chip.small { min-height: 32px; padding: 5px 12px; font-size: 13px; }
   .trend .cap { font-size: 13px; color: var(--muted); margin: 0 0 4px 4px; }
 
@@ -263,8 +263,9 @@
   <footer>
     <p>Zielzeit 25–30 s. Zu schnell: feiner mahlen. Zu langsam: gröber mahlen.</p>
     <details class="changelog">
-      <summary>Version 1.9.2 · Änderungen anzeigen</summary>
+      <summary>Version 1.10 · Änderungen anzeigen</summary>
       <ul>
+        <li><b>1.10</b> Grafik: Linie bricht bei Wechsel des Mahlkonus ab, Konus zur Anzeige wählbar</li>
         <li><b>1.9.2</b> Zusatzgrafik wieder entfernt</li>
         <li><b>1.9.1</b> Zusatzgrafik: Zeit, Output und Input untereinander mit gemeinsamer X-Achse</li>
         <li><b>1.9</b> Grafik: Nummer steht neben dem Punkt statt darüber</li>
@@ -388,6 +389,16 @@
   var axis = "nr";
   try { var a = localStorage.getItem(AXIS_KEY); axis = a === "grind" || a === "burr" ? a : "nr"; } catch (e) {}
 
+  var KKEY = KEY + "-konus";
+  var kfilter = "all";
+  try { kfilter = localStorage.getItem(KKEY) || "all"; } catch (e) {}
+  function burrOf(s) { return String(s.burr == null ? "" : s.burr).trim(); }
+  function burrValues() {
+    var seen = {};
+    shots.forEach(function (s) { var b = burrOf(s); if (b) seen[b] = 1; });
+    return Object.keys(seen).sort(function (a, b) { return (parseFloat(a) - parseFloat(b)) || (a < b ? -1 : a > b ? 1 : 0); });
+  }
+
   function renderTrend() {
     var nr = numbers();
     var box = $("trend");
@@ -400,7 +411,17 @@
       '<button type="button" class="chip small" data-axis="nr" aria-pressed="' + (!isGrind) + '">Nr.</button>' +
       '<button type="button" class="chip small" data-axis="grind" aria-pressed="' + (axis === "grind") + '">Mahlgrad</button>' +
       '<button type="button" class="chip small" data-axis="burr" aria-pressed="' + (axis === "burr") + '">Mahlkonus</button></div>';
-    var all = chrono().filter(function (s) { return s.time != null; });
+    var kvals = burrValues();
+    if (kfilter !== "all" && kvals.indexOf(kfilter) < 0) kfilter = "all";
+    if (kvals.length) {
+      ctrl += '<div class="axis" role="group" aria-label="Mahlkonus zur Anzeige wählen"><span class="label">Konus</span>' +
+        ["all"].concat(kvals).map(function (v) {
+          return '<button type="button" class="chip small" data-konus="' + esc(v) + '" aria-pressed="' + (kfilter === v) + '">' + (v === "all" ? "alle" : esc(v)) + "</button>";
+        }).join("") + "</div>";
+    }
+    var all = chrono().filter(function (s) {
+      return s.time != null && (kfilter === "all" || burrOf(s) === kfilter);
+    });
     var data = isGrind
       ? all.filter(function (s) { return gv(s) != null; }).slice(-60)
       : all.slice(-12);
@@ -437,9 +458,18 @@
     }
     var line = "";
     if (!isGrind) {
-      line = '<polyline points="' + data.map(function (s, i) {
-        return x(s, i).toFixed(1) + "," + y(s.time).toFixed(1);
-      }).join(" ") + '" fill="none" stroke="var(--crema)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
+      // Linie nur zwischen aufeinanderfolgenden Bezügen mit gleichem Mahlkonus
+      var segs = [], cur = [];
+      data.forEach(function (s, i) {
+        if (cur.length && burrOf(cur[cur.length - 1].s) !== burrOf(s)) { segs.push(cur); cur = []; }
+        cur.push({ s: s, i: i });
+      });
+      if (cur.length) segs.push(cur);
+      line = segs.filter(function (sg) { return sg.length > 1; }).map(function (sg) {
+        return '<polyline points="' + sg.map(function (p) {
+          return x(p.s, p.i).toFixed(1) + "," + y(p.s.time).toFixed(1);
+        }).join(" ") + '" fill="none" stroke="var(--crema)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
+      }).join("");
     }
     var dots = data.map(function (s, i) {
       return '<circle cx="' + x(s, i).toFixed(1) + '" cy="' + y(s.time).toFixed(1) + '" r="' + (isGrind ? 5 : 4) + '" fill="' + colorOf(s.time) + '" stroke="var(--surface-2)" stroke-width="1.5"/>';
@@ -465,10 +495,17 @@
       '<text x="' + (L - 6) + '" y="' + (y(25) + 4).toFixed(1) + '" text-anchor="end" font-size="11" fill="var(--muted)">25</text>' +
       line + dots + labels + "</svg>";
     box.innerHTML = ctrl + '<p class="cap">Bezugszeit in s, Zielband 25–30 s. ' +
-      (isGrind ? "Unten: " + axisName + ". Zahl neben dem Punkt: Nr. im Verlauf." : "Unten: Nr. im Verlauf.") + "</p>" + svg;
+      (isGrind ? "Unten: " + axisName + ". Zahl neben dem Punkt: Nr. im Verlauf." : "Unten: Nr. im Verlauf. Die Linie bricht bei einem Wechsel des Mahlkonus ab.") + "</p>" + svg;
   }
 
   $("trend").addEventListener("click", function (e) {
+    var kb = e.target.closest("button[data-konus]");
+    if (kb) {
+      kfilter = kb.getAttribute("data-konus");
+      try { localStorage.setItem(KKEY, kfilter); } catch (err) {}
+      renderTrend();
+      return;
+    }
     var b = e.target.closest("button[data-axis]");
     if (!b) return;
     var v = b.getAttribute("data-axis"); axis = v === "grind" || v === "burr" ? v : "nr";
