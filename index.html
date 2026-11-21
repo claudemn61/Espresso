@@ -121,6 +121,17 @@
   .status { min-height: 20px; font-size: 14px; color: var(--muted); margin: 0; }
   #csvBox { display: none; font-size: 12px; min-height: 120px; }
   footer p { margin: 0 0 8px; }
+  .title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .ver { font: inherit; font-size: 13px; font-weight: 700; color: var(--crema); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; min-height: 32px; cursor: pointer; font-variant-numeric: tabular-nums; }
+  .ver:focus-visible { outline: 2px solid var(--crema); outline-offset: 2px; }
+  .sheet { position: fixed; inset: 0; background: rgba(10, 6, 4, 0.72); display: flex; align-items: flex-end; justify-content: center; z-index: 10; }
+  .sheet[hidden] { display: none; }
+  .sheet-panel { background: var(--surface); border: 1px solid var(--line); border-radius: 18px 18px 0 0; width: 100%; max-width: 560px; max-height: 80%; overflow: auto; padding: 18px 18px calc(18px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 14px; }
+  .log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+  .log li { display: grid; grid-template-columns: auto 1fr; gap: 2px 14px; align-items: baseline; }
+  .log .lv { font-family: var(--display); font-weight: 700; color: var(--crema); font-variant-numeric: tabular-nums; }
+  .log .lt { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .log .lx { grid-column: 2; font-size: 15px; }
   .changelog { text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 0 14px; }
   .changelog summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; color: var(--crema); font-weight: 700; }
   .changelog ul { margin: 0; padding: 0 0 12px 18px; display: flex; flex-direction: column; gap: 6px; }
@@ -150,9 +161,9 @@
 <body>
 <main>
   <header>
-    <div>
+    <div class="title">
       <h1>Espresso Log</h1>
-      <p>Mahlgrad, Dosis, Ausbeute, Zeit</p>
+      <button type="button" class="ver" id="verBtn" aria-haspopup="dialog" aria-label="Version und Änderungsprotokoll öffnen"></button>
     </div>
     <div class="count" id="count" aria-live="polite"></div>
   </header>
@@ -262,27 +273,15 @@
 
   <footer>
     <p>Zielzeit 25–30 s. Zu schnell: feiner mahlen. Zu langsam: gröber mahlen.</p>
-    <details class="changelog">
-      <summary>Version 1.10.1 · Änderungen anzeigen</summary>
-      <ul>
-        <li><b>1.10.1</b> Neue Versionen kommen beim Öffnen zuverlässiger an</li>
-        <li><b>1.10</b> Grafik: Linie bricht bei Wechsel des Mahlkonus ab, Konus zur Anzeige wählbar</li>
-        <li><b>1.9.2</b> Zusatzgrafik wieder entfernt</li>
-        <li><b>1.9.1</b> Zusatzgrafik: Zeit, Output und Input untereinander mit gemeinsamer X-Achse</li>
-        <li><b>1.9</b> Grafik: Nummer steht neben dem Punkt statt darüber</li>
-        <li><b>1.8</b> Versionsnummer und Änderungsprotokoll</li>
-        <li><b>1.7</b> App lädt beim Öffnen zuerst die neueste Version</li>
-        <li><b>1.6</b> Mahlgrad und Mahlkonus nur ganze Zahlen, ganzzahlige Achse in der Grafik</li>
-        <li><b>1.5</b> Neue Variable Mahlkonus-Einstellung, auch als X-Achse wählbar</li>
-        <li><b>1.4</b> Verlaufseinträge bearbeitbar</li>
-        <li><b>1.3</b> X-Achse der Grafik wählbar</li>
-        <li><b>1.2</b> Bezüge durchnummeriert, Nummern in der Grafik</li>
-        <li><b>1.1</b> Anleitung zum Finden des Mahlgrads</li>
-        <li><b>1.0</b> Erste Version</li>
-      </ul>
-    </details>
   </footer>
 </main>
+
+<div class="sheet" id="logSheet" hidden role="dialog" aria-modal="true" aria-labelledby="logTitle">
+  <div class="sheet-panel">
+    <div class="card-head"><h2 id="logTitle">Änderungsprotokoll</h2><button type="button" class="btn small" id="logClose">Schliessen</button></div>
+    <ul class="log" id="logList"></ul>
+  </div>
+</div>
 
 <script>
 (function () {
@@ -705,6 +704,39 @@
       say("CSV wird gespeichert.");
     } catch (e) { say("Speichern nicht möglich. Bitte CSV kopieren."); }
   });
+
+  /* Version und Änderungsprotokoll (neueste zuerst). Bei jeder Änderung hier oben ergänzen. */
+  var CHANGELOG = [
+    { v: "1.10.2", t: "2026-11-21 15:45", x: "Version neben dem Titel, Protokoll per Tipp darauf, mit Uhrzeit" },
+    { v: "1.10.1", t: "2026-11-21 15:23", x: "Neue Versionen kommen beim Öffnen zuverlässiger an" },
+    { v: "1.10", t: "2026-11-21 15:17", x: "Grafik: Linie bricht bei Wechsel des Mahlkonus ab, Konus zur Anzeige wählbar" },
+    { v: "1.9.2", t: "2026-11-21 15:08", x: "Zusatzgrafik wieder entfernt" },
+    { v: "1.9.1", t: "2026-11-21 14:58", x: "Zusatzgrafik: Zeit, Output und Input untereinander" },
+    { v: "1.9", t: "2026-11-21 14:08", x: "Grafik: Nummer steht neben dem Punkt statt darüber" },
+    { v: "1.8", t: "2026-11-21 14:05", x: "Versionsnummer und Änderungsprotokoll" },
+    { v: "1.7", t: "2026-11-21 14:04", x: "App lädt beim Öffnen zuerst die neueste Version" },
+    { v: "1.6", t: "2026-11-21 14:00", x: "Mahlgrad und Mahlkonus nur ganze Zahlen, ganzzahlige Achse in der Grafik" },
+    { v: "1.5", t: "2026-11-21 13:48", x: "Neue Variable Mahlkonus-Einstellung, auch als X-Achse wählbar" },
+    { v: "1.4", t: "2026-11-21 13:46", x: "Verlaufseinträge bearbeitbar" },
+    { v: "1.3", t: "2026-11-21 13:43", x: "X-Achse der Grafik wählbar" },
+    { v: "1.2", t: "2026-11-21 13:35", x: "Bezüge durchnummeriert, Nummern in der Grafik" },
+    { v: "1.1", t: "2026-11-21 12:03", x: "Anleitung zum Finden des Mahlgrads" },
+    { v: "1.0", t: "2026-11-21 10:20", x: "Erste Version" }
+  ];
+  function fmtStamp(t) {
+    var p = t.split(" ");
+    return fmtDate(p[0]) + ", " + p[1] + " Uhr";
+  }
+  $("verBtn").textContent = "v" + CHANGELOG[0].v;
+  $("logList").innerHTML = CHANGELOG.map(function (c) {
+    return '<li><span class="lv">' + esc(c.v) + '</span><span class="lt">' + esc(fmtStamp(c.t)) + '</span><span class="lx">' + esc(c.x) + "</span></li>";
+  }).join("");
+  function openLog() { $("logSheet").hidden = false; $("logClose").focus(); }
+  function closeLog() { $("logSheet").hidden = true; $("verBtn").focus(); }
+  $("verBtn").addEventListener("click", openLog);
+  $("logClose").addEventListener("click", closeLog);
+  $("logSheet").addEventListener("click", function (e) { if (e.target === this) closeLog(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("logSheet").hidden) closeLog(); });
 
   ["grind", "burr"].forEach(function (id) {
     $(id).addEventListener("input", function () {
