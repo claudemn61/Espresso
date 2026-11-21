@@ -116,6 +116,23 @@
   #csvBox { display: none; font-size: 12px; min-height: 120px; }
   footer { color: var(--muted); font-size: 13px; text-align: center; padding: 4px 8px; }
 
+  details.guide { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 0 18px; }
+  details.guide summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; font-family: var(--display); font-weight: 700; font-size: 18px; }
+  details.guide summary::-webkit-details-marker { display: none; }
+  details.guide summary::after { content: "+"; color: var(--crema); font-size: 24px; line-height: 1; }
+  details.guide[open] summary::after { content: "\2212"; }
+  details.guide summary:focus-visible { outline: 2px solid var(--crema); outline-offset: 2px; border-radius: 12px; }
+  .guide-body { padding: 0 0 18px; display: flex; flex-direction: column; gap: 14px; }
+  .guide-body ol { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 12px; }
+  .guide-body li::marker { color: var(--crema); font-weight: 700; }
+  .guide-body li b { color: var(--text); }
+  .guide-body p, .guide-body li { color: var(--muted); font-size: 15px; margin: 0; }
+  .guide-body li b, .guide-body li strong { font-weight: 700; }
+  .rules { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--surface-2); border-radius: 12px; overflow: hidden; }
+  .rules th, .rules td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .rules th { color: var(--muted); font-weight: 500; font-size: 13px; }
+  .rules tr:last-child td { border-bottom: 0; }
+
   @media (prefers-reduced-motion: no-preference) { .btn, .chip { transition: background .15s, transform .1s; } }
 </style>
 </head>
@@ -128,6 +145,32 @@
     </div>
     <div class="count" id="count" aria-live="polite"></div>
   </header>
+
+  <details class="guide" id="guide">
+    <summary>So findest du den Mahlgrad</summary>
+    <div class="guide-body">
+      <ol>
+        <li><b>Ausgangswerte festlegen.</b> Input = Korbgrösse (meist 18 g), Output = doppelte Menge (36 g, Verhältnis 1 : 2), Zielzeit 25–30 s. Stelle die Mühle auf eine mittlere Stufe und notiere die Raststufe.</li>
+        <li><b>Bezug ziehen und messen.</b> Mehl auf 0,1 g abwiegen. Tasse samt Waage unter den Auslauf stellen, Stoppuhr mit dem Pumpenstart starten und beim Zielgewicht (36 g) die Pumpe stoppen.</li>
+        <li><b>Eintragen.</b> Trage Input, Output, Zeit und Geschmack unter «Neuer Bezug» ein und speichere. Bohne, Mahlgrad und Mengen bleiben stehen, du änderst nur, was sich ändert.</li>
+        <li><b>Mahlgrad anpassen.</b> Die App zeigt dir die Bewertung der Zeit. Nur den Mahlgrad verändern, immer um eine Raststufe, Dosis und Output bleiben gleich.</li>
+        <li><b>Mühle leerlaufen lassen.</b> Nach jeder Verstellung die ersten 5–10 g verwerfen, weil noch Mehl vom alten Mahlgrad in der Mühle steckt. Erst der zweite Bezug zählt.</li>
+        <li><b>Geschmack prüfen.</b> Liegt die Zeit im Zielbereich, entscheidet der Geschmack (siehe Tabelle). Ändere dann die Ausbeute, nicht die Dosis.</li>
+        <li><b>Einstellung bestätigen.</b> Zwei bis drei Bezüge in Folge mit höchstens ±2 s Abweichung und gleichem Geschmack gelten als fertig. Die Raststufe ist dein Wert für diese Bohne.</li>
+      </ol>
+      <table class="rules">
+        <thead><tr><th>Beobachtung</th><th>Massnahme</th></tr></thead>
+        <tbody>
+          <tr><td>Unter 25 s, sauer oder dünn</td><td>Eine Stufe feiner mahlen</td></tr>
+          <tr><td>Über 30 s, bitter oder trocken</td><td>Eine Stufe gröber mahlen</td></tr>
+          <tr><td>25–30 s, aber sauer</td><td>Ausbeute erhöhen (z. B. 40 g) oder etwas feiner</td></tr>
+          <tr><td>25–30 s, aber bitter</td><td>Ausbeute senken (z. B. 32 g) oder etwas gröber</td></tr>
+          <tr><td>25–30 s, ausgewogen</td><td>Fertig, Stufe notieren</td></tr>
+        </tbody>
+      </table>
+      <p>Bei jeder neuen Bohnensorte und etwa alle ein bis zwei Wochen mit derselben Bohne neu nachstellen, weil frisch geröstete Bohnen im Lauf der Zeit schneller durchlaufen.</p>
+    </div>
+  </details>
 
   <section class="card" aria-labelledby="newTitle">
     <div class="card-head"><h2 id="newTitle">Neuer Bezug</h2></div>
