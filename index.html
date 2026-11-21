@@ -199,7 +199,7 @@
       </div>
       <div class="field">
         <label for="grind">Mahlgrad (Raststufe)</label>
-        <input id="grind" type="text" inputmode="decimal" placeholder="z. B. 12">
+        <input id="grind" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="z. B. 12">
       </div>
       <div class="field">
         <label for="burr">Mahlkonus-Einstellung</label>
@@ -396,9 +396,10 @@
     if (isGrind) {
       var gs = data.map(function (s) { return gv(s); });
       gmin = Math.min.apply(null, gs); gmax = Math.max.apply(null, gs);
+      gmin = Math.floor(gmin); gmax = Math.ceil(gmax);
       if (gmax === gmin) { gmin -= 1; gmax += 1; }
       var range = gmax - gmin;
-      var step = range <= 3 ? 0.5 : range <= 6 ? 1 : range <= 12 ? 2 : range <= 30 ? 5 : 10;
+      var step = range <= 8 ? 1 : range <= 16 ? 2 : range <= 40 ? 5 : 10;
       for (var t = Math.ceil(gmin / step) * step; t <= gmax + 1e-9; t += step) ticks.push(t);
     }
     var PAD = 10;
@@ -422,7 +423,7 @@
     var labels;
     if (isGrind) {
       labels = ticks.map(function (t) {
-        return '<text x="' + gx(t).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="11" fill="var(--text)">' + +t.toFixed(1) + "</text>";
+        return '<text x="' + gx(t).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="11" fill="var(--text)">' + t + "</text>";
       }).join("") + data.map(function (s, i) {
         return '<text x="' + x(s, i).toFixed(1) + '" y="' + (y(s.time) - 9).toFixed(1) + '" text-anchor="middle" font-size="10" fill="var(--muted)">' + nr[s.id] + "</text>";
       }).join("");
@@ -643,9 +644,11 @@
     } catch (e) { say("Speichern nicht möglich. Bitte CSV kopieren."); }
   });
 
-  $("burr").addEventListener("input", function () {
-    var v = this.value.replace(/\D/g, "");
-    if (v !== this.value) this.value = v;
+  ["grind", "burr"].forEach(function (id) {
+    $(id).addEventListener("input", function () {
+      var v = this.value.replace(/\D/g, "");
+      if (v !== this.value) this.value = v;
+    });
   });
 
   $("date").value = today();
