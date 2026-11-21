@@ -203,7 +203,7 @@
       </div>
       <div class="field">
         <label for="burr">Mahlkonus-Einstellung</label>
-        <input id="burr" type="text" inputmode="decimal" placeholder="z. B. 2,5">
+        <input id="burr" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="z. B. 2">
       </div>
       <div class="field">
         <label for="dose">Input (g)</label>
@@ -641,6 +641,11 @@
       document.body.appendChild(a); a.click(); a.remove();
       say("CSV wird gespeichert.");
     } catch (e) { say("Speichern nicht möglich. Bitte CSV kopieren."); }
+  });
+
+  $("burr").addEventListener("input", function () {
+    var v = this.value.replace(/\D/g, "");
+    if (v !== this.value) this.value = v;
   });
 
   $("date").value = today();
