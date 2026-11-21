@@ -1,4 +1,4 @@
-const CACHE = "espresso-log-v8";
+const CACHE = "espresso-log-v9";
 const SHELL = [
   "./",
   "index.html",
@@ -21,20 +21,18 @@ self.addEventListener("activate", (e) => {
   );
 });
 
+// Netzwerk zuerst: neue Version kommt sofort, Cache dient nur als Offline-Reserve.
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
   e.respondWith(
-    caches.match(e.request).then((hit) => {
-      const net = fetch(e.request)
-        .then((res) => {
-          if (res && (res.ok || res.type === "opaque")) {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(e.request, copy));
-          }
-          return res;
-        })
-        .catch(() => hit);
-      return hit || net;
-    })
+    fetch(e.request)
+      .then((res) => {
+        if (res && (res.ok || res.type === "opaque")) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, copy));
+        }
+        return res;
+      })
+      .catch(() => caches.match(e.request, { ignoreSearch: true }))
   );
 });
