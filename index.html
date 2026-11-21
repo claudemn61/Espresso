@@ -93,6 +93,8 @@
 
   .trend { background: var(--surface-2); border-radius: 14px; padding: 12px 12px 6px; }
   .trend svg { width: 100%; height: auto; display: block; }
+  .axis { display: flex; align-items: center; gap: 8px; margin: 0 0 8px 4px; }
+  .chip.small { min-height: 32px; padding: 5px 12px; font-size: 13px; }
   .trend .cap { font-size: 13px; color: var(--muted); margin: 0 0 4px 4px; }
 
   .list { display: flex; flex-direction: column; gap: 10px; list-style: none; margin: 0; padding: 0; }
@@ -349,41 +351,92 @@
     $("beans").innerHTML = Object.keys(seen).map(function (b) { return '<option value="' + esc(b) + '">'; }).join("");
   }
 
+  var AXIS_KEY = KEY + "-axis";
+  var axis = "nr";
+  try { axis = localStorage.getItem(AXIS_KEY) === "grind" ? "grind" : "nr"; } catch (e) {}
+
   function renderTrend() {
     var nr = numbers();
-    var data = chrono().filter(function (s) { return s.time != null; }).slice(-12);
     var box = $("trend");
+    var isGrind = axis === "grind";
+    var ctrl =
+      '<div class="axis" role="group" aria-label="X-Achse wählen"><span class="label">X-Achse</span>' +
+      '<button type="button" class="chip small" data-axis="nr" aria-pressed="' + (!isGrind) + '">Nr.</button>' +
+      '<button type="button" class="chip small" data-axis="grind" aria-pressed="' + isGrind + '">Mahlgrad</button></div>';
+    var all = chrono().filter(function (s) { return s.time != null; });
+    var data = isGrind
+      ? all.filter(function (s) { return num(s.grind) != null; }).slice(-60)
+      : all.slice(-12);
     if (data.length < 2) {
-      box.innerHTML = '<p class="cap">Bezugszeit je Bezug (mindestens zwei Einträge nötig)</p>';
+      box.innerHTML = ctrl + '<p class="cap">' + (isGrind
+        ? "Für diese Ansicht braucht es mindestens zwei Bezüge mit Mahlgrad und Zeit."
+        : "Bezugszeit je Bezug (mindestens zwei Einträge nötig)") + "</p>";
       return;
     }
-    var W = 320, H = 136, L = 30, R = 10, T = 10, B = 24;
-    var lo = Math.min(15, Math.min.apply(null, data.map(function (s) { return s.time; })) - 2);
-    var hi = Math.max(40, Math.max.apply(null, data.map(function (s) { return s.time; })) + 2);
+    var W = 320, H = 150, L = 30, R = 10, T = 14, B = 26;
+    var times = data.map(function (s) { return s.time; });
+    var lo = Math.min(15, Math.min.apply(null, times) - 2);
+    var hi = Math.max(40, Math.max.apply(null, times) + 2);
     function y(v) { return T + (H - T - B) * (1 - (v - lo) / (hi - lo)); }
-    function x(i) { return L + (W - L - R) * (data.length === 1 ? 0.5 : i / (data.length - 1)); }
-    var pts = data.map(function (s, i) { return x(i).toFixed(1) + "," + y(s.time).toFixed(1); }).join(" ");
+
+    var gmin = 0, gmax = 1, ticks = [];
+    if (isGrind) {
+      var gs = data.map(function (s) { return num(s.grind); });
+      gmin = Math.min.apply(null, gs); gmax = Math.max.apply(null, gs);
+      if (gmax === gmin) { gmin -= 1; gmax += 1; }
+      var range = gmax - gmin;
+      var step = range <= 3 ? 0.5 : range <= 6 ? 1 : range <= 12 ? 2 : range <= 30 ? 5 : 10;
+      for (var t = Math.ceil(gmin / step) * step; t <= gmax + 1e-9; t += step) ticks.push(t);
+    }
+    var PAD = 10;
+    function gx(g) { return L + PAD + (W - L - R - 2 * PAD) * ((g - gmin) / (gmax - gmin)); }
+    function x(s, i) {
+      return isGrind ? gx(num(s.grind)) : L + (W - L - R) * (i / (data.length - 1));
+    }
+    function colorOf(t) {
+      var c = timeClass(t);
+      return c === "good" ? "var(--good)" : c === "near" ? "var(--near)" : "var(--off)";
+    }
+    var line = "";
+    if (!isGrind) {
+      line = '<polyline points="' + data.map(function (s, i) {
+        return x(s, i).toFixed(1) + "," + y(s.time).toFixed(1);
+      }).join(" ") + '" fill="none" stroke="var(--crema)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
+    }
     var dots = data.map(function (s, i) {
-      var c = timeClass(s.time);
-      var col = c === "good" ? "var(--good)" : c === "near" ? "var(--near)" : "var(--off)";
-      return '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(s.time).toFixed(1) + '" r="4" fill="' + col + '" stroke="var(--surface-2)" stroke-width="1.5"/>';
+      return '<circle cx="' + x(s, i).toFixed(1) + '" cy="' + y(s.time).toFixed(1) + '" r="' + (isGrind ? 5 : 4) + '" fill="' + colorOf(s.time) + '" stroke="var(--surface-2)" stroke-width="1.5"/>';
     }).join("");
-    var labels = data.map(function (s, i) {
-      return '<text x="' + x(i).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle" font-size="11" fill="var(--text)">' + nr[s.id] + "</text>";
-    }).join("");
+    var labels;
+    if (isGrind) {
+      labels = ticks.map(function (t) {
+        return '<text x="' + gx(t).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="11" fill="var(--text)">' + +t.toFixed(1) + "</text>";
+      }).join("") + data.map(function (s, i) {
+        return '<text x="' + x(s, i).toFixed(1) + '" y="' + (y(s.time) - 9).toFixed(1) + '" text-anchor="middle" font-size="10" fill="var(--muted)">' + nr[s.id] + "</text>";
+      }).join("");
+    } else {
+      labels = data.map(function (s, i) {
+        return '<text x="' + x(s, i).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="11" fill="var(--text)">' + nr[s.id] + "</text>";
+      }).join("");
+    }
     var svg =
-      '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Bezugszeiten der letzten ' + data.length + ' Bezüge">' +
+      '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Bezugszeiten, X-Achse: ' + (isGrind ? "Mahlgrad" : "Nummer im Verlauf") + '">' +
       '<rect x="' + L + '" y="' + y(30).toFixed(1) + '" width="' + (W - L - R) + '" height="' + (y(25) - y(30)).toFixed(1) + '" fill="var(--good)" opacity="0.18"/>' +
       '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(30).toFixed(1) + '" y2="' + y(30).toFixed(1) + '" stroke="var(--line)" stroke-dasharray="3 3"/>' +
       '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(25).toFixed(1) + '" y2="' + y(25).toFixed(1) + '" stroke="var(--line)" stroke-dasharray="3 3"/>' +
       '<text x="' + (L - 6) + '" y="' + (y(30) + 4).toFixed(1) + '" text-anchor="end" font-size="11" fill="var(--muted)">30</text>' +
       '<text x="' + (L - 6) + '" y="' + (y(25) + 4).toFixed(1) + '" text-anchor="end" font-size="11" fill="var(--muted)">25</text>' +
-      '<polyline points="' + pts + '" fill="none" stroke="var(--crema)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>' +
-      dots +
-      labels +
-      "</svg>";
-    box.innerHTML = '<p class="cap">Bezugszeit in s, Zielband 25–30 s. Zahlen unten: Nr. im Verlauf.</p>' + svg;
+      line + dots + labels + "</svg>";
+    box.innerHTML = ctrl + '<p class="cap">Bezugszeit in s, Zielband 25–30 s. ' +
+      (isGrind ? "Unten: Mahlgrad. Zahl am Punkt: Nr. im Verlauf." : "Unten: Nr. im Verlauf.") + "</p>" + svg;
   }
+
+  $("trend").addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-axis]");
+    if (!b) return;
+    axis = b.getAttribute("data-axis") === "grind" ? "grind" : "nr";
+    try { localStorage.setItem(AXIS_KEY, axis); } catch (err) {}
+    renderTrend();
+  });
 
   function renderList() {
     var ul = $("list");
