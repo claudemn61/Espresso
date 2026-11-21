@@ -99,6 +99,7 @@
   .shot { background: var(--surface-2); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
   .shot-top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
   .shot-bean { font-family: var(--display); font-weight: 700; font-size: 17px; overflow-wrap: anywhere; }
+  .shot-nr { display: inline-block; min-width: 28px; text-align: center; margin-right: 8px; padding: 1px 8px; border-radius: 999px; background: var(--crema); color: var(--crema-ink); font-family: var(--body); font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; vertical-align: 2px; }
   .shot-date { color: var(--muted); font-size: 13px; white-space: nowrap; }
   .shot-nums { display: flex; flex-wrap: wrap; gap: 6px 14px; font-variant-numeric: tabular-nums; }
   .shot-nums span b { font-weight: 700; }
@@ -329,6 +330,19 @@
     }
   }
 
+  /* Nummerierung: ältester Bezug = 1. Wird bei jedem Rendern neu berechnet, Löschen rückt nach. */
+  function chrono() {
+    return shots.slice().sort(function (a, b) {
+      if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+      return String(a.id).localeCompare(String(b.id), undefined, { numeric: true });
+    });
+  }
+  function numbers() {
+    var map = {};
+    chrono().forEach(function (s, i) { map[s.id] = i + 1; });
+    return map;
+  }
+
   function renderBeans() {
     var seen = {};
     shots.forEach(function (s) { if (!s.ex && s.bean) seen[s.bean] = 1; });
@@ -336,15 +350,14 @@
   }
 
   function renderTrend() {
-    var data = shots.slice().sort(function (a, b) {
-      return a.date === b.date ? 0 : a.date < b.date ? -1 : 1;
-    }).filter(function (s) { return s.time != null; }).slice(-12);
+    var nr = numbers();
+    var data = chrono().filter(function (s) { return s.time != null; }).slice(-12);
     var box = $("trend");
     if (data.length < 2) {
       box.innerHTML = '<p class="cap">Bezugszeit je Bezug (mindestens zwei Einträge nötig)</p>';
       return;
     }
-    var W = 320, H = 130, L = 30, R = 10, T = 10, B = 18;
+    var W = 320, H = 136, L = 30, R = 10, T = 10, B = 24;
     var lo = Math.min(15, Math.min.apply(null, data.map(function (s) { return s.time; })) - 2);
     var hi = Math.max(40, Math.max.apply(null, data.map(function (s) { return s.time; })) + 2);
     function y(v) { return T + (H - T - B) * (1 - (v - lo) / (hi - lo)); }
@@ -355,7 +368,9 @@
       var col = c === "good" ? "var(--good)" : c === "near" ? "var(--near)" : "var(--off)";
       return '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(s.time).toFixed(1) + '" r="4" fill="' + col + '" stroke="var(--surface-2)" stroke-width="1.5"/>';
     }).join("");
-    var last = data[data.length - 1];
+    var labels = data.map(function (s, i) {
+      return '<text x="' + x(i).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle" font-size="11" fill="var(--text)">' + nr[s.id] + "</text>";
+    }).join("");
     var svg =
       '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Bezugszeiten der letzten ' + data.length + ' Bezüge">' +
       '<rect x="' + L + '" y="' + y(30).toFixed(1) + '" width="' + (W - L - R) + '" height="' + (y(25) - y(30)).toFixed(1) + '" fill="var(--good)" opacity="0.18"/>' +
@@ -365,17 +380,15 @@
       '<text x="' + (L - 6) + '" y="' + (y(25) + 4).toFixed(1) + '" text-anchor="end" font-size="11" fill="var(--muted)">25</text>' +
       '<polyline points="' + pts + '" fill="none" stroke="var(--crema)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>' +
       dots +
-      '<text x="' + (W - R) + '" y="' + (H - 3) + '" text-anchor="end" font-size="11" fill="var(--muted)">letzter Bezug: ' + fmt(last.time, 0) + ' s</text>' +
+      labels +
       "</svg>";
-    box.innerHTML = '<p class="cap">Bezugszeit in s, Zielband 25–30 s</p>' + svg;
+    box.innerHTML = '<p class="cap">Bezugszeit in s, Zielband 25–30 s. Zahlen unten: Nr. im Verlauf.</p>' + svg;
   }
 
   function renderList() {
     var ul = $("list");
-    var sorted = shots.slice().sort(function (a, b) {
-      if (a.date !== b.date) return a.date < b.date ? 1 : -1;
-      return String(b.id).localeCompare(String(a.id));
-    });
+    var nr = numbers();
+    var sorted = chrono().reverse();
     if (!sorted.length) {
       ul.innerHTML = '<li class="empty">Noch kein Bezug gespeichert.</li>';
       return;
@@ -385,7 +398,7 @@
       var tc = timeClass(s.time);
       var armed = armedDelete === s.id;
       return '<li class="shot" data-id="' + esc(s.id) + '">' +
-        '<div class="shot-top"><span class="shot-bean">' + esc(s.bean || "Ohne Bohnenname") + '</span><span class="shot-date">' + esc(fmtDate(s.date)) + "</span></div>" +
+        '<div class="shot-top"><span class="shot-bean"><span class="shot-nr" aria-label="Nummer ' + nr[s.id] + '">' + nr[s.id] + '</span>' + esc(s.bean || "Ohne Bohnenname") + '</span><span class="shot-date">' + esc(fmtDate(s.date)) + "</span></div>" +
         '<div class="shot-nums">' +
         "<span>Mahlgrad <b>" + esc(s.grind || "–") + "</b></span>" +
         "<span><b>" + fmt(s.dose) + "</b> g rein</span>" +
@@ -492,11 +505,12 @@
 
   /* Export */
   function csv() {
-    var head = ["Datum", "Bohnen", "Mahlgrad", "Input_g", "Output_g", "Zeit_s", "Verhaeltnis", "Geschmack", "Notiz"];
+    var nr = numbers();
+    var head = ["Nr", "Datum", "Bohnen", "Mahlgrad", "Input_g", "Output_g", "Zeit_s", "Verhaeltnis", "Geschmack", "Notiz"];
     function cell(v) { return '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"'; }
     var rows = shots.filter(function (s) { return !s.ex; }).sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; }).map(function (s) {
       var r = ratio(s.dose, s.yld);
-      return [s.date, s.bean, s.grind, s.dose, s.yld, s.time, r == null ? "" : r.toFixed(2), s.taste, s.note].map(cell).join(";");
+      return [nr[s.id], s.date, s.bean, s.grind, s.dose, s.yld, s.time, r == null ? "" : r.toFixed(2), s.taste, s.note].map(cell).join(";");
     });
     return [head.join(";")].concat(rows).join("\n");
   }
