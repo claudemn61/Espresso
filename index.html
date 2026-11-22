@@ -79,7 +79,9 @@
 
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-  .stamp { grid-column: 1 / -1; color: var(--muted); font-size: 15px; min-height: 1.2em; }
+  .stamp-row { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .stamp-row h2 { font-size: 18px; }
+  .stamp { color: var(--muted); font-size: 16px; min-height: 1.2em; font-variant-numeric: tabular-nums; }
   .cols { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .col { display: flex; flex-direction: column; gap: 12px; padding: 12px; border-radius: 16px; min-width: 0; }
   .col-mill { background: rgba(147, 196, 125, 0.10); border: 1px solid rgba(147, 196, 125, 0.28); }
@@ -226,13 +228,12 @@
   </header>
 
   <section class="card" aria-labelledby="newTitle">
-    <div class="card-head"><h2 id="newTitle">Neuer Bezug</h2></div>
     <div class="editbar" id="editBar" hidden><span id="editText"></span><button type="button" class="btn small" id="cancelEdit">Abbrechen</button></div>
 
     <div class="best" id="best" aria-label="Beste Einstellung bisher"></div>
 
     <form id="form" class="grid" autocomplete="off">
-      <div class="stamp" id="stamp" aria-label="Datum und Uhrzeit"></div>
+      <div class="stamp-row"><h2 id="newTitle">Neuer Bezug</h2><span class="stamp" id="stamp" aria-label="Datum und Uhrzeit"></span></div>
       <input id="date" type="hidden">
       <input id="clock" type="hidden">
       <div class="field wide">
