@@ -124,7 +124,9 @@
   .gr-actions, .gr-edit { display: flex; gap: 8px; flex-wrap: wrap; }
   .gr-edit input { flex: 1 1 160px; }
   .gr-add { display: flex; flex-direction: column; gap: 6px; }
-  .shot-line { display: flex; flex-wrap: nowrap; gap: 6px 12px; font-size: 14px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .shot-line { display: flex; flex-wrap: wrap; gap: 4px 11px; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .shot-line span { white-space: nowrap; }
+  .triple { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
   .shot-time { display: flex; align-items: baseline; gap: 16px; font-variant-numeric: tabular-nums; }
   .shot-line b, .shot-time b { font-weight: 700; }
   .pill { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); }
@@ -211,13 +213,19 @@
         <input id="bean" type="text" list="beans" placeholder="Sorte oder Röstung">
         <datalist id="beans"></datalist>
       </div>
-      <div class="field">
-        <label for="grind">MG (Raststufe)</label>
-        <input id="grind" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="z. B. 12">
-      </div>
-      <div class="field">
-        <label for="burr">Mahlkonus-Einstellung</label>
-        <input id="burr" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="z. B. 2">
+      <div class="triple">
+        <div class="field">
+          <label for="grind">MG</label>
+          <input id="grind" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="12">
+        </div>
+        <div class="field">
+          <label for="mtime">M.Time (s)</label>
+          <input id="mtime" type="text" inputmode="decimal" placeholder="7,5">
+        </div>
+        <div class="field">
+          <label for="burr">Mahlkonus</label>
+          <input id="burr" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="2">
+        </div>
       </div>
       <div class="field">
         <label for="dose">Input (g)</label>
@@ -341,6 +349,7 @@
     var n = parseFloat(String(v).replace(",", "."));
     return isFinite(n) ? n : null;
   }
+  function trim1(n) { return n == null ? "–" : String(+n.toFixed(1)); }
   function fmt(n, d) { return n == null ? "–" : n.toFixed(d == null ? 1 : d); }
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
@@ -598,9 +607,10 @@
         '<div class="shot-top"><span class="shot-bean"><span class="shot-nr" aria-label="Nummer ' + nr[s.id] + '">' + nr[s.id] + '</span>' + esc(s.bean || "Ohne Bohnenname") + '</span><span class="shot-date">' + esc(fmtDate(s.date)) + "</span></div>" +
         '<div class="shot-line">' +
         "<span>MG <b>" + esc(s.grind || "–") + "</b></span>" +
+        (s.mtime != null ? "<span>M.Time <b>" + trim1(s.mtime) + "</b> s</span>" : "") +
         (s.burr ? "<span>Konus <b>" + esc(s.burr) + "</b></span>" : "") +
-        "<span><b>" + fmt(s.dose) + "</b> g rein</span>" +
-        "<span><b>" + fmt(s.yld) + "</b> g raus</span></div>" +
+        "<span><b>" + trim1(s.dose) + "</b> g rein</span>" +
+        "<span><b>" + trim1(s.yld) + "</b> g raus</span></div>" +
         '<div class="shot-time">' +
         '<span class="' + (tc || "") + '"><b>' + fmt(s.time, 0) + "</b> s</span>" +
         "<span>1 : <b>" + (r == null ? "–" : r.toFixed(1)) + "</b></span></div>" +
@@ -660,7 +670,7 @@
     editId = s.id;
     $("date").value = s.date || today();
     $("bean").value = s.bean || "";
-    $("grind").value = s.grind || ""; $("burr").value = s.burr || "";
+    $("grind").value = s.grind || ""; $("burr").value = s.burr || ""; $("mtime").value = s.mtime == null ? "" : s.mtime;
     $("dose").value = s.dose == null ? "" : s.dose;
     $("yield").value = s.yld == null ? "" : s.yld;
     $("time").value = s.time == null ? "" : s.time;
@@ -686,6 +696,7 @@
       bean: $("bean").value.trim(),
       grind: $("grind").value.trim(),
       burr: $("burr").value.trim(),
+      mtime: num($("mtime").value),
       dose: num($("dose").value),
       yld: num($("yield").value),
       time: num($("time").value),
@@ -725,7 +736,7 @@
     if (btn.getAttribute("data-act") === "edit") { startEdit(s); return; }
     if (btn.getAttribute("data-act") === "reuse") {
       $("bean").value = s.ex ? "" : s.bean || "";
-      $("grind").value = s.grind || ""; $("burr").value = s.burr || "";
+      $("grind").value = s.grind || ""; $("burr").value = s.burr || ""; $("mtime").value = s.mtime == null ? "" : s.mtime;
       $("dose").value = s.dose == null ? "" : s.dose;
       $("yield").value = s.yld == null ? "" : s.yld;
       $("time").value = ""; $("note").value = ""; setTaste("");
@@ -746,11 +757,11 @@
   /* Export */
   function csv() {
     var nr = numbers();
-    var head = ["Nr", "Datum", "Bohnen", "Mahlgrad", "Mahlkonus", "Input_g", "Output_g", "Zeit_s", "Verhaeltnis", "Geschmack", "Notiz"];
+    var head = ["Nr", "Datum", "Bohnen", "Mahlgrad", "MTime_s", "Mahlkonus", "Input_g", "Output_g", "Zeit_s", "Verhaeltnis", "Geschmack", "Notiz"];
     function cell(v) { return '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"'; }
     var rows = shots.filter(function (s) { return !s.ex; }).sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; }).map(function (s) {
       var r = ratio(s.dose, s.yld);
-      return [nr[s.id], s.date, s.bean, s.grind, s.burr, s.dose, s.yld, s.time, r == null ? "" : r.toFixed(2), s.taste, s.note].map(cell).join(";");
+      return [nr[s.id], s.date, s.bean, s.grind, s.mtime, s.burr, s.dose, s.yld, s.time, r == null ? "" : r.toFixed(2), s.taste, s.note].map(cell).join(";");
     });
     return [head.join(";")].concat(rows).join("\n");
   }
@@ -824,7 +835,7 @@
   var renameId = null, armedGr = null;
   function renderHead() { $("grName").textContent = cur().name; $("histGr").textContent = cur().name; }
   function clearForm() {
-    ["bean", "grind", "burr", "dose", "yield", "time", "note"].forEach(function (id) { $(id).value = ""; });
+    ["bean", "grind", "mtime", "burr", "dose", "yield", "time", "note"].forEach(function (id) { $(id).value = ""; });
     $("date").value = today();
     setTaste("");
   }
@@ -920,6 +931,10 @@
     closeSheet("grSheet");
   });
 
+  $("mtime").addEventListener("input", function () {
+    var v = this.value.replace(/[^0-9.,]/g, "");
+    if (v !== this.value) this.value = v;
+  });
   ["grind", "burr"].forEach(function (id) {
     $(id).addEventListener("input", function () {
       var v = this.value.replace(/\D/g, "");
