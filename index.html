@@ -67,6 +67,7 @@
 
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .stamp { grid-column: 1 / -1; color: var(--muted); font-size: 15px; min-height: 1.2em; }
   .field.wide { grid-column: 1 / -1; }
   label, .label { font-size: 13px; color: var(--muted); font-weight: 500; }
   input, textarea {
@@ -210,43 +211,37 @@
     </div>
 
     <form id="form" class="grid" autocomplete="off">
-      <div class="field">
-        <label for="date">Datum</label>
-        <input id="date" type="date" required>
-      </div>
-      <div class="field">
-        <label for="clock">Uhrzeit</label>
-        <input id="clock" type="time">
-      </div>
+      <div class="stamp" id="stamp" aria-label="Datum und Uhrzeit"></div>
+      <input id="date" type="hidden">
+      <input id="clock" type="hidden">
       <div class="field wide">
         <label for="bean">Bohnen</label>
         <input id="bean" type="text" list="beans" placeholder="Sorte oder Röstung">
         <datalist id="beans"></datalist>
       </div>
-      <div class="triple">
-        <div class="field">
-          <label for="grind">MG</label>
-          <input id="grind" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="12">
-        </div>
-        <div class="field">
-          <label for="mtime">M.sek.</label>
-          <input id="mtime" type="text" inputmode="decimal" placeholder="7,5">
-        </div>
+      <div class="field">
+        <label for="mtime">Mahldauer (s)</label>
+        <input id="mtime" type="text" inputmode="decimal" placeholder="7,5">
       </div>
       <div class="field">
-        <label for="dose">Input (g)</label>
+        <label for="dose">Mahlmenge (g)</label>
         <input id="dose" type="text" inputmode="decimal" placeholder="18">
       </div>
       <div class="field">
-        <label for="yield">Output (g)</label>
+        <label for="grind">Mahlgrad</label>
+        <input id="grind" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="12">
+      </div>
+      <div class="field">
+        <span class="label">Stoppuhr</span>
+        <button type="button" class="btn" id="stopBtn" aria-live="polite">Start</button>
+      </div>
+      <div class="field">
+        <label for="yield">Kaffeemenge (g)</label>
         <input id="yield" type="text" inputmode="decimal" placeholder="36">
       </div>
-      <div class="field wide">
-        <label for="time">Zeit (s)</label>
-        <div class="time-row">
-          <input id="time" type="text" inputmode="decimal" placeholder="27">
-          <button type="button" class="btn" id="stopBtn" aria-live="polite">Stoppuhr</button>
-        </div>
+      <div class="field">
+        <label for="time">Bezugdauer (s)</label>
+        <input id="time" type="text" inputmode="decimal" placeholder="27">
       </div>
       <div class="field wide">
         <span class="label" id="tasteLabel">Geschmack</span>
@@ -683,14 +678,14 @@
       var secs = (Date.now() - sw.t0) / 1000;
       $("time").value = secs.toFixed(0);
       setSaved(false);
-      btn.textContent = "Stoppuhr"; btn.classList.remove("running");
+      btn.textContent = "Start"; btn.classList.remove("running");
       updateLive();
     } else {
       sw.t0 = Date.now();
       btn.classList.add("running");
-      btn.textContent = "0.0 s, stoppen";
+      btn.textContent = "0.0 s, Stopp";
       sw.timer = setInterval(function () {
-        btn.textContent = ((Date.now() - sw.t0) / 1000).toFixed(1) + " s, stoppen";
+        btn.textContent = ((Date.now() - sw.t0) / 1000).toFixed(1) + " s, Stopp";
       }, 100);
     }
   });
@@ -704,6 +699,7 @@
     editId = s.id;
     $("date").value = s.date || today();
     $("clock").value = shotClock(s);
+    showStamp();
     $("bean").value = s.bean || "";
     $("grind").value = s.grind || ""; $("mtime").value = s.mtime == null ? "" : s.mtime;
     $("dose").value = s.dose == null ? "" : s.dose;
@@ -727,6 +723,7 @@
   $("form").addEventListener("submit", function (e) {
     e.preventDefault();
     if (saved) return;
+    if (!editId) { $("date").value = today(); $("clock").value = nowClock(); }
     var entry = {
       id: String(Date.now()),
       date: $("date").value || today(),
@@ -833,6 +830,7 @@
 
   /* Version und Änderungsprotokoll (neueste zuerst). Bei jeder Änderung hier oben ergänzen. */
   var CHANGELOG = [
+    { v: "1.11.2", t: "2026-11-22 13:50", x: "Datum und Uhrzeit nur als Angabe, neue Anordnung der Eingabekacheln" },
     { v: "1.11.1", t: "2026-11-22 13:35", x: "Mahlkonus aus der App entfernt (Formular, Verlauf, Grafik, CSV); gespeicherte Konus-Werte gelöscht" },
     { v: "1.11", t: "2026-11-22 08:30", x: "Mehrere Kaffeemühlen mit eigenen Daten, Anleitung als «?», Verlaufszeile mit MG, Konus nur bei vorhandenem Wert" },
     { v: "1.10.2", t: "2026-11-21 15:45", x: "Version neben dem Titel, Protokoll per Tipp darauf, mit Uhrzeit" },
@@ -879,10 +877,18 @@
   /* Kaffeemühlen: jede Mühle hat eigene Bezüge, Grafiken und Bohnen */
   var renameId = null, armedGr = null;
   function renderHead() { $("grName").textContent = cur().name; $("histGr").textContent = cur().name; }
+  function showStamp() {
+    var d = $("date").value, c = $("clock").value;
+    $("stamp").textContent = d ? fmtDate(d) + (c ? ", " + c : "") : "";
+  }
+  function liveStamp() {
+    if (!editId) { $("date").value = today(); $("clock").value = nowClock(); }
+    showStamp();
+  }
+  setInterval(liveStamp, 20000);
   function clearForm() {
     ["bean", "grind", "mtime", "dose", "yield", "time", "note"].forEach(function (id) { $(id).value = ""; });
-    $("date").value = today();
-    $("clock").value = nowClock();
+    liveStamp();
     setTaste("");
     setSaved(false);
   }
