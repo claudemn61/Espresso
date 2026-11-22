@@ -596,7 +596,10 @@
   function renderList() {
     var ul = $("list");
     var nr = numbers();
-    var sorted = chrono().reverse();
+    var ch = chrono();
+    var prevBurr = {};
+    ch.forEach(function (s, i) { prevBurr[s.id] = i ? burrOf(ch[i - 1]) : ""; });
+    var sorted = ch.slice().reverse();
     if (!sorted.length) {
       ul.innerHTML = '<li class="empty">Noch kein Bezug gespeichert.</li>';
       return;
@@ -609,7 +612,7 @@
         '<div class="shot-top"><span class="shot-bean"><span class="shot-nr" aria-label="Nummer ' + nr[s.id] + '">' + nr[s.id] + '</span>' + esc(s.bean || "Ohne Bohnenname") + '</span><span class="shot-date">' + esc(fmtDate(s.date)) + "</span></div>" +
         '<div class="shot-line"><div class="sl-left">' +
         '<span title="Mahlgrad">🎚️ <b>' + esc(s.grind || "–") + "</b></span>" +
-        (s.burr ? "<span>K. <b>" + esc(s.burr) + "</b></span>" : "") +
+        (s.burr && burrOf(s) !== prevBurr[s.id] ? "<span>K. <b>" + esc(s.burr) + "</b></span>" : "") +
         '</div><div class="sl-right">' +
         (s.mtime != null ? '<span title="Mahlzeit in Sekunden">⏲️ <b>' + trim1(s.mtime) + "</b></span>" : "") +
         '<span title="Input, Mehl rein">🫘 <b>' + trim1(s.dose) + "</b> g</span>" +
