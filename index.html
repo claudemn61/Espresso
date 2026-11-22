@@ -219,11 +219,11 @@
           <input id="grind" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="12">
         </div>
         <div class="field">
-          <label for="mtime">M.Time (s)</label>
+          <label for="mtime">M.sek.</label>
           <input id="mtime" type="text" inputmode="decimal" placeholder="7,5">
         </div>
         <div class="field">
-          <label for="burr">Mahlkonus</label>
+          <label for="burr">K.</label>
           <input id="burr" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="2">
         </div>
       </div>
@@ -483,16 +483,16 @@
     if (axis === "burr" && !kvals.length) axis = "nr";
     var isGrind = axis !== "nr";
     var gkey = axis === "burr" ? "burr" : "grind";
-    var axisName = axis === "burr" ? "Mahlkonus" : "MG";
+    var axisName = axis === "burr" ? "K." : "MG";
     function gv(s) { return num(s[gkey]); }
     var ctrl =
       '<div class="axis" role="group" aria-label="X-Achse wählen"><span class="label">X-Achse</span>' +
       '<button type="button" class="chip small" data-axis="nr" aria-pressed="' + (!isGrind) + '">Nr.</button>' +
       '<button type="button" class="chip small" data-axis="grind" aria-pressed="' + (axis === "grind") + '">MG</button>' +
-      (kvals.length ? '<button type="button" class="chip small" data-axis="burr" aria-pressed="' + (axis === "burr") + '">Mahlkonus</button>' : "") + "</div>";
+      (kvals.length ? '<button type="button" class="chip small" data-axis="burr" aria-pressed="' + (axis === "burr") + '">K.</button>' : "") + "</div>";
     if (kfilter !== "all" && kvals.indexOf(kfilter) < 0) kfilter = "all";
     if (kvals.length) {
-      ctrl += '<div class="axis" role="group" aria-label="Mahlkonus zur Anzeige wählen"><span class="label">Konus</span>' +
+      ctrl += '<div class="axis" role="group" aria-label="Mahlkonus zur Anzeige wählen"><span class="label">K.</span>' +
         ["all"].concat(kvals).map(function (v) {
           return '<button type="button" class="chip small" data-konus="' + esc(v) + '" aria-pressed="' + (kfilter === v) + '">' + (v === "all" ? "alle" : esc(v)) + "</button>";
         }).join("") + "</div>";
@@ -607,8 +607,8 @@
         '<div class="shot-top"><span class="shot-bean"><span class="shot-nr" aria-label="Nummer ' + nr[s.id] + '">' + nr[s.id] + '</span>' + esc(s.bean || "Ohne Bohnenname") + '</span><span class="shot-date">' + esc(fmtDate(s.date)) + "</span></div>" +
         '<div class="shot-line">' +
         "<span>MG <b>" + esc(s.grind || "–") + "</b></span>" +
-        (s.mtime != null ? "<span>M.Time <b>" + trim1(s.mtime) + "</b> s</span>" : "") +
-        (s.burr ? "<span>Konus <b>" + esc(s.burr) + "</b></span>" : "") +
+        (s.mtime != null ? "<span>M.sek. <b>" + trim1(s.mtime) + "</b></span>" : "") +
+        (s.burr ? "<span>K. <b>" + esc(s.burr) + "</b></span>" : "") +
         "<span><b>" + trim1(s.dose) + "</b> g rein</span>" +
         "<span><b>" + trim1(s.yld) + "</b> g raus</span></div>" +
         '<div class="shot-time">' +
@@ -757,7 +757,7 @@
   /* Export */
   function csv() {
     var nr = numbers();
-    var head = ["Nr", "Datum", "Bohnen", "Mahlgrad", "MTime_s", "Mahlkonus", "Input_g", "Output_g", "Zeit_s", "Verhaeltnis", "Geschmack", "Notiz"];
+    var head = ["Nr", "Datum", "Bohnen", "Mahlgrad", "MSek_s", "Mahlkonus", "Input_g", "Output_g", "Zeit_s", "Verhaeltnis", "Geschmack", "Notiz"];
     function cell(v) { return '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"'; }
     var rows = shots.filter(function (s) { return !s.ex; }).sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; }).map(function (s) {
       var r = ratio(s.dose, s.yld);
