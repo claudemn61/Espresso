@@ -56,6 +56,11 @@
   .count { font-family: var(--display); color: var(--crema); font-size: 14px; text-align: right; }
 
   .card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+  .fold { all: unset; box-sizing: border-box; display: flex; align-items: baseline; gap: 8px; width: 100%; min-height: 44px; cursor: pointer; font: inherit; color: inherit; }
+  .fold:focus-visible { outline: 2px solid var(--crema); outline-offset: 2px; border-radius: 8px; }
+  .fold .chev { margin-left: auto; color: var(--crema); transition: transform .15s; }
+  .fold[aria-expanded="false"] .chev { transform: rotate(-90deg); }
+  #histBody[hidden] { display: none; }
   .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 
   .ratio { display: flex; align-items: center; justify-content: space-between; gap: 16px; background: var(--surface-2); border-radius: 14px; padding: 14px 16px; }
@@ -263,9 +268,11 @@
   </section>
 
   <section class="card" aria-labelledby="histTitle">
-    <div class="card-head"><h2 id="histTitle">Verlauf <span class="hist-gr" id="histGr"></span></h2></div>
-    <div class="trend" id="trend"></div>
-    <ul class="list" id="list"></ul>
+    <div class="card-head"><h2 id="histTitle"><button type="button" class="fold" id="histToggle" aria-expanded="true" aria-controls="histBody">Verlauf <span class="hist-gr" id="histGr"></span><span class="chev" aria-hidden="true">▾</span></button></h2></div>
+    <div id="histBody">
+      <div class="trend" id="trend"></div>
+      <ul class="list" id="list"></ul>
+    </div>
   </section>
 
   <section class="card" aria-labelledby="expTitle">
@@ -876,6 +883,19 @@
 
   /* Kaffeemühlen: jede Mühle hat eigene Bezüge, Grafiken und Bohnen */
   var renameId = null, armedGr = null;
+  var HIST_KEY = KEY + "-histopen";
+  function setHist(open) {
+    $("histBody").hidden = !open;
+    $("histToggle").setAttribute("aria-expanded", open ? "true" : "false");
+  }
+  var histOpen = true;
+  try { histOpen = localStorage.getItem(HIST_KEY) !== "0"; } catch (e) {}
+  setHist(histOpen);
+  $("histToggle").addEventListener("click", function () {
+    histOpen = $("histBody").hidden;
+    setHist(histOpen);
+    try { localStorage.setItem(HIST_KEY, histOpen ? "1" : "0"); } catch (e) {}
+  });
   function renderHead() { $("grName").textContent = cur().name; $("histGr").textContent = cur().name; }
   function showStamp() {
     var d = $("date").value, c = $("clock").value;
