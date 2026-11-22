@@ -89,6 +89,7 @@
   .btn.primary { background: var(--crema); color: var(--crema-ink); border-color: var(--crema); font-size: 17px; }
   .btn.small { min-height: 38px; padding: 8px 12px; font-size: 14px; font-weight: 500; }
   .btn.running { background: var(--off); color: #2a1008; border-color: var(--off); }
+  .btn:disabled, .btn.primary:disabled { background: var(--surface-2); color: var(--muted); border-color: var(--line); opacity: 0.6; cursor: default; transform: none; }
   .btn:active { transform: translateY(1px); }
 
   .trend { background: var(--surface-2); border-radius: 14px; padding: 12px 12px 6px; }
@@ -211,6 +212,10 @@
         <input id="date" type="date" required>
       </div>
       <div class="field">
+        <label for="clock">Uhrzeit</label>
+        <input id="clock" type="time">
+      </div>
+      <div class="field wide">
         <label for="bean">Bohnen</label>
         <input id="bean" type="text" list="beans" placeholder="Sorte oder Röstung">
         <datalist id="beans"></datalist>
@@ -341,6 +346,10 @@
   var KEY = "espresso-log-v1";
   var $ = function (id) { return document.getElementById(id); };
 
+  function nowClock() {
+    var d = new Date();
+    return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  }
   function today() {
     var d = new Date();
     var m = String(d.getMonth() + 1).padStart(2, "0");
@@ -410,6 +419,11 @@
   var taste = "";
   var armedDelete = null;
   var editId = null;
+  var saved = false;
+  function setSaved(v) {
+    saved = v;
+    $("submitBtn").disabled = v;
+  }
 
   function ratio(dose, y) { return dose > 0 && y > 0 ? y / dose : null; }
   function timeClass(t) {
@@ -445,6 +459,7 @@
   function chrono() {
     return shots.slice().sort(function (a, b) {
       if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+      if ((a.clock || "") !== (b.clock || "")) return (a.clock || "") < (b.clock || "") ? -1 : 1;
       return String(a.id).localeCompare(String(b.id), undefined, { numeric: true });
     });
   }
@@ -609,7 +624,7 @@
       var tc = timeClass(s.time);
       var armed = armedDelete === s.id;
       return '<li class="shot' + (editId === s.id ? " editing" : "") + '" data-id="' + esc(s.id) + '">' +
-        '<div class="shot-top"><span class="shot-bean"><span class="shot-nr" aria-label="Nummer ' + nr[s.id] + '">' + nr[s.id] + '</span>' + esc(s.bean || "Ohne Bohnenname") + '</span><span class="shot-date">' + esc(fmtDate(s.date)) + "</span></div>" +
+        '<div class="shot-top"><span class="shot-bean"><span class="shot-nr" aria-label="Nummer ' + nr[s.id] + '">' + nr[s.id] + '</span>' + esc(s.bean || "Ohne Bohnenname") + '</span><span class="shot-date">' + esc(fmtDate(s.date) + (s.clock ? ", " + s.clock : "")) + "</span></div>" +
         '<div class="shot-line"><div class="sl-left">' +
         '<span title="Mahlgrad">🎚️ <b>' + esc(s.grind || "–") + "</b></span>" +
         (s.burr && burrOf(s) !== prevBurr[s.id] ? "<span>K. <b>" + esc(s.burr) + "</b></span>" : "") +
@@ -643,6 +658,7 @@
   $("tasteChips").addEventListener("click", function (e) {
     var b = e.target.closest(".chip");
     if (!b) return;
+    setSaved(false);
     setTaste(taste === b.getAttribute("data-v") ? "" : b.getAttribute("data-v"));
   });
   ["dose", "yield", "time"].forEach(function (id) { $(id).addEventListener("input", updateLive); });
@@ -655,6 +671,7 @@
       clearInterval(sw.timer); sw.timer = null;
       var secs = (Date.now() - sw.t0) / 1000;
       $("time").value = secs.toFixed(0);
+      setSaved(false);
       btn.textContent = "Stoppuhr"; btn.classList.remove("running");
       updateLive();
     } else {
@@ -675,6 +692,7 @@
   function startEdit(s) {
     editId = s.id;
     $("date").value = s.date || today();
+    $("clock").value = s.clock || "";
     $("bean").value = s.bean || "";
     $("grind").value = s.grind || ""; $("burr").value = s.burr || ""; $("mtime").value = s.mtime == null ? "" : s.mtime;
     $("dose").value = s.dose == null ? "" : s.dose;
@@ -685,6 +703,7 @@
     $("editText").textContent = "Bearbeite Nr. " + numbers()[s.id];
     $("editBar").hidden = false;
     $("submitBtn").textContent = "Änderung speichern";
+    setSaved(false);
     updateLive(); renderList();
     $("newTitle").scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -696,9 +715,11 @@
 
   $("form").addEventListener("submit", function (e) {
     e.preventDefault();
+    if (saved) return;
     var entry = {
       id: String(Date.now()),
       date: $("date").value || today(),
+      clock: $("clock").value || "",
       bean: $("bean").value.trim(),
       grind: $("grind").value.trim(),
       burr: $("burr").value.trim(),
@@ -725,6 +746,7 @@
     // Nächste Messung: alle Werte des letzten Bezugs übernehmen, nur die Zeit nicht
     prefillLast();
     updateLive(); renderAll();
+    setSaved(true);
     var st = $("status");
     st.textContent = msg;
     setTimeout(function () { if (st.textContent === msg) st.textContent = ""; }, 2500);
@@ -741,6 +763,7 @@
     if (!s) return;
     if (btn.getAttribute("data-act") === "edit") { startEdit(s); return; }
     if (btn.getAttribute("data-act") === "reuse") {
+      setSaved(false);
       $("bean").value = s.ex ? "" : s.bean || "";
       $("grind").value = s.grind || ""; $("burr").value = s.burr || ""; $("mtime").value = s.mtime == null ? "" : s.mtime;
       $("dose").value = s.dose == null ? "" : s.dose;
@@ -763,11 +786,11 @@
   /* Export */
   function csv() {
     var nr = numbers();
-    var head = ["Nr", "Datum", "Bohnen", "Mahlgrad", "MSek_s", "Mahlkonus", "Input_g", "Output_g", "Zeit_s", "Verhaeltnis", "Geschmack", "Notiz"];
+    var head = ["Nr", "Datum", "Uhrzeit", "Bohnen", "Mahlgrad", "MSek_s", "Mahlkonus", "Input_g", "Output_g", "Zeit_s", "Verhaeltnis", "Geschmack", "Notiz"];
     function cell(v) { return '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"'; }
     var rows = shots.filter(function (s) { return !s.ex; }).sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; }).map(function (s) {
       var r = ratio(s.dose, s.yld);
-      return [nr[s.id], s.date, s.bean, s.grind, s.mtime, s.burr, s.dose, s.yld, s.time, r == null ? "" : r.toFixed(2), s.taste, s.note].map(cell).join(";");
+      return [nr[s.id], s.date, s.clock, s.bean, s.grind, s.mtime, s.burr, s.dose, s.yld, s.time, r == null ? "" : r.toFixed(2), s.taste, s.note].map(cell).join(";");
     });
     return [head.join(";")].concat(rows).join("\n");
   }
@@ -843,7 +866,9 @@
   function clearForm() {
     ["bean", "grind", "mtime", "burr", "dose", "yield", "time", "note"].forEach(function (id) { $(id).value = ""; });
     $("date").value = today();
+    $("clock").value = nowClock();
     setTaste("");
+    setSaved(false);
   }
   function prefillLast() {
     clearForm();
@@ -955,6 +980,7 @@
     var v = this.value.replace(/[^0-9.,]/g, "");
     if (v !== this.value) this.value = v;
   });
+  $("form").addEventListener("input", function () { if (saved) setSaved(false); });
   ["grind", "burr"].forEach(function (id) {
     $(id).addEventListener("input", function () {
       var v = this.value.replace(/\D/g, "");
