@@ -492,6 +492,16 @@
   var axis = "nr";
   try { var a = localStorage.getItem(AXIS_KEY); axis = a === "grind" ? a : "nr"; } catch (e) {}
 
+  var KIND_KEY = KEY + "-kind";
+  var kind = "all";
+  try { var kk = localStorage.getItem(KIND_KEY); kind = kk === "single" || kk === "double" ? kk : "all"; } catch (e) {}
+  // Einzel- oder Doppelbezug: nach Input (unter 13 g = Einzel), ersatzweise nach Output (unter 26 g)
+  function kindOf(s) {
+    if (s.dose != null) return s.dose < 13 ? "single" : "double";
+    if (s.yld != null) return s.yld < 26 ? "single" : "double";
+    return "double";
+  }
+
   function renderTrend() {
     var nr = numbers();
     var box = $("trend");
@@ -504,9 +514,17 @@
       '<button type="button" class="chip small" data-axis="nr" aria-pressed="' + (!isGrind) + '">Nr.</button>' +
       '<button type="button" class="chip small" data-axis="grind" aria-pressed="' + (axis === "grind") + '">MG</button>' +
       "</div>";
-    var all = chrono().filter(function (s) {
-      return s.time != null;
-    });
+    var withTime = chrono().filter(function (s) { return s.time != null; });
+    var hasSingle = withTime.some(function (s) { return kindOf(s) === "single"; });
+    var hasDouble = withTime.some(function (s) { return kindOf(s) === "double"; });
+    if (!(hasSingle && hasDouble)) kind = "all";
+    if (hasSingle && hasDouble) {
+      ctrl += '<div class="axis" role="group" aria-label="Bezugsart wählen"><span class="label">Bezug</span>' +
+        [["all", "alle"], ["single", "Einzel"], ["double", "Doppel"]].map(function (k) {
+          return '<button type="button" class="chip small" data-kind="' + k[0] + '" aria-pressed="' + (kind === k[0]) + '">' + k[1] + "</button>";
+        }).join("") + "</div>";
+    }
+    var all = withTime.filter(function (s) { return kind === "all" || kindOf(s) === kind; });
     var data = isGrind
       ? all.filter(function (s) { return gv(s) != null; }).slice(-60)
       : all.slice(-40);
@@ -590,6 +608,13 @@
   }
 
   $("trend").addEventListener("click", function (e) {
+    var kb = e.target.closest("button[data-kind]");
+    if (kb) {
+      kind = kb.getAttribute("data-kind");
+      try { localStorage.setItem(KIND_KEY, kind); } catch (err) {}
+      renderTrend();
+      return;
+    }
     var b = e.target.closest("button[data-axis]");
     if (!b) return;
     var v = b.getAttribute("data-axis"); axis = v === "grind" ? v : "nr";
