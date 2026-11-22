@@ -346,6 +346,14 @@
   var KEY = "espresso-log-v1";
   var $ = function (id) { return document.getElementById(id); };
 
+  function shotClock(s) {
+    if (s.clock) return s.clock;
+    if (/^\d{13}$/.test(String(s.id))) {
+      var d = new Date(Number(s.id));
+      return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+    }
+    return "";
+  }
   function nowClock() {
     var d = new Date();
     return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
@@ -459,7 +467,7 @@
   function chrono() {
     return shots.slice().sort(function (a, b) {
       if (a.date !== b.date) return a.date < b.date ? -1 : 1;
-      if ((a.clock || "") !== (b.clock || "")) return (a.clock || "") < (b.clock || "") ? -1 : 1;
+      if (shotClock(a) !== shotClock(b)) return shotClock(a) < shotClock(b) ? -1 : 1;
       return String(a.id).localeCompare(String(b.id), undefined, { numeric: true });
     });
   }
@@ -624,7 +632,7 @@
       var tc = timeClass(s.time);
       var armed = armedDelete === s.id;
       return '<li class="shot' + (editId === s.id ? " editing" : "") + '" data-id="' + esc(s.id) + '">' +
-        '<div class="shot-top"><span class="shot-bean"><span class="shot-nr" aria-label="Nummer ' + nr[s.id] + '">' + nr[s.id] + '</span>' + esc(s.bean || "Ohne Bohnenname") + '</span><span class="shot-date">' + esc(fmtDate(s.date) + (s.clock ? ", " + s.clock : "")) + "</span></div>" +
+        '<div class="shot-top"><span class="shot-bean"><span class="shot-nr" aria-label="Nummer ' + nr[s.id] + '">' + nr[s.id] + '</span>' + esc(s.bean || "Ohne Bohnenname") + '</span><span class="shot-date">' + esc(fmtDate(s.date) + (shotClock(s) ? ", " + shotClock(s) : "")) + "</span></div>" +
         '<div class="shot-line"><div class="sl-left">' +
         '<span title="Mahlgrad">🎚️ <b>' + esc(s.grind || "–") + "</b></span>" +
         (s.burr && burrOf(s) !== prevBurr[s.id] ? "<span>K. <b>" + esc(s.burr) + "</b></span>" : "") +
@@ -692,7 +700,7 @@
   function startEdit(s) {
     editId = s.id;
     $("date").value = s.date || today();
-    $("clock").value = s.clock || "";
+    $("clock").value = shotClock(s);
     $("bean").value = s.bean || "";
     $("grind").value = s.grind || ""; $("burr").value = s.burr || ""; $("mtime").value = s.mtime == null ? "" : s.mtime;
     $("dose").value = s.dose == null ? "" : s.dose;
@@ -790,7 +798,7 @@
     function cell(v) { return '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"'; }
     var rows = shots.filter(function (s) { return !s.ex; }).sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; }).map(function (s) {
       var r = ratio(s.dose, s.yld);
-      return [nr[s.id], s.date, s.clock, s.bean, s.grind, s.mtime, s.burr, s.dose, s.yld, s.time, r == null ? "" : r.toFixed(2), s.taste, s.note].map(cell).join(";");
+      return [nr[s.id], s.date, shotClock(s), s.bean, s.grind, s.mtime, s.burr, s.dose, s.yld, s.time, r == null ? "" : r.toFixed(2), s.taste, s.note].map(cell).join(";");
     });
     return [head.join(";")].concat(rows).join("\n");
   }
