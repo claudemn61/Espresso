@@ -64,6 +64,13 @@
   .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 
   .ratio { display: flex; align-items: center; justify-content: space-between; gap: 16px; background: var(--surface-2); border-radius: 14px; padding: 14px 16px; }
+  .ratio.wide { grid-column: 1 / -1; }
+  .best { background: var(--surface-2); border-radius: 14px; padding: 12px 16px; display: flex; flex-direction: column; gap: 6px; }
+  .best-title { font-size: 13px; color: var(--muted); font-weight: 500; }
+  .best-row { display: flex; align-items: baseline; gap: 12px; font-variant-numeric: tabular-nums; }
+  .best-kind { font-family: var(--display); font-weight: 700; font-size: 17px; color: var(--crema); min-width: 64px; }
+  .best-vals { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+  .best-vals b { font-weight: 700; }
   .ratio-num { white-space: nowrap; flex-shrink: 0; font-family: var(--display); font-size: 40px; line-height: 1; font-variant-numeric: tabular-nums; }
   .ratio-num small { font-size: 16px; color: var(--muted); font-family: var(--body); margin-left: 4px; }
   .ratio-hint { font-size: 14px; text-align: right; color: var(--muted); max-width: 190px; }
@@ -222,10 +229,7 @@
     <div class="card-head"><h2 id="newTitle">Neuer Bezug</h2></div>
     <div class="editbar" id="editBar" hidden><span id="editText"></span><button type="button" class="btn small" id="cancelEdit">Abbrechen</button></div>
 
-    <div class="ratio" aria-live="polite">
-      <div class="ratio-num" id="ratioNum">1 : <span id="ratioVal">–</span></div>
-      <div class="ratio-hint" id="ratioHint">Dosis und Ausbeute eintragen.</div>
-    </div>
+    <div class="best" id="best" aria-label="Beste Einstellung bisher"></div>
 
     <form id="form" class="grid" autocomplete="off">
       <div class="stamp" id="stamp" aria-label="Datum und Uhrzeit"></div>
@@ -267,6 +271,10 @@
             <input id="time" type="text" inputmode="decimal" placeholder="27">
           </div>
         </div>
+      </div>
+      <div class="ratio wide" aria-live="polite">
+        <div class="ratio-num" id="ratioNum">1 : <span id="ratioVal">–</span></div>
+        <div class="ratio-hint" id="ratioHint">Dosis und Ausbeute eintragen.</div>
       </div>
       <div class="field wide">
         <span class="label" id="tasteLabel">Geschmack</span>
@@ -525,6 +533,30 @@
     return "double";
   }
 
+  // Beste bisherige Einstellung je Einzel/Doppel: Zeit im Zielband 25–30 s oder am nächsten daran,
+  // bei Gleichstand: mit Stern, dann näher an 27,5 s, dann der neuere Bezug
+  function bestFor(k) {
+    var c = chrono().filter(function (s) { return !s.ex && s.time != null && s.grind && kindOf(s) === k; });
+    var best = null, bs = null;
+    c.forEach(function (s, i) {
+      var d = s.time < 25 ? 25 - s.time : s.time > 30 ? s.time - 30 : 0;
+      var sc = [d, s.star ? 0 : 1, Math.abs(s.time - 27.5), -i];
+      if (!bs || sc[0] < bs[0] || (sc[0] === bs[0] && (sc[1] < bs[1] || (sc[1] === bs[1] && (sc[2] < bs[2] || (sc[2] === bs[2] && sc[3] < bs[3])))))) { bs = sc; best = s; }
+    });
+    return best;
+  }
+  function renderBest() {
+    var rows = [["single", "Einzel"], ["double", "Doppel"]].map(function (k) {
+      var s = bestFor(k[0]);
+      return '<div class="best-row"><span class="best-kind">' + k[1] + "</span>" + (s
+        ? '<span class="best-vals"><span title="Mahlgrad">🎚️ <b>' + esc(s.grind) + "</b></span>" +
+          '<span title="Mahldauer in Sekunden">⏲️ <b>' + (s.mtime != null ? trim1(s.mtime) + " s" : "–") + "</b></span>" +
+          '<span class="' + timeClass(s.time) + '" title="Bezugdauer in Sekunden">⏱️ <b>' + fmt(s.time, 0) + " s</b></span></span>"
+        : '<span class="best-vals">noch kein Bezug</span>') + "</div>";
+    }).join("");
+    $("best").innerHTML = '<div class="best-title">Beste Einstellung bisher (Mahlgrad · Mahldauer · Zeit)</div>' + rows;
+  }
+
   function renderTrend() {
     var nr = numbers();
     var box = $("trend");
@@ -679,7 +711,7 @@
   }
 
   function renderAll() {
-    renderHead(); renderBeans(); renderTrend(); renderList();
+    renderHead(); renderBeans(); renderBest(); renderTrend(); renderList();
   }
 
   function setTaste(v) {
@@ -858,6 +890,7 @@
 
   /* Version und Änderungsprotokoll (neueste zuerst). Bei jeder Änderung hier oben ergänzen. */
   var CHANGELOG = [
+    { v: "1.12", t: "2026-11-22 21:03", x: "Oben: beste bisherige Einstellung (Mahlgrad, Mahldauer) für Einzel und Doppel; Verhältnis unter die Eingabekacheln" },
     { v: "1.11.3", t: "2026-11-22 19:31", x: "Eingabekacheln spaltenweise gruppiert (Mühle grün, Bezug rot), Input/Output blau, neue Reihenfolge" },
     { v: "1.11.2", t: "2026-11-22 13:50", x: "Datum und Uhrzeit nur als Angabe, neue Anordnung der Eingabekacheln" },
     { v: "1.11.1", t: "2026-11-22 13:35", x: "Mahlkonus aus der App entfernt (Formular, Verlauf, Grafik, CSV); gespeicherte Konus-Werte gelöscht" },
