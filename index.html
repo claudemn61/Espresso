@@ -73,6 +73,13 @@
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
   .stamp { grid-column: 1 / -1; color: var(--muted); font-size: 15px; min-height: 1.2em; }
+  .cols { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .col { display: flex; flex-direction: column; gap: 12px; padding: 12px; border-radius: 16px; min-width: 0; }
+  .col-mill { background: rgba(147, 196, 125, 0.10); border: 1px solid rgba(147, 196, 125, 0.28); }
+  .col-shot { background: rgba(229, 128, 106, 0.10); border: 1px solid rgba(229, 128, 106, 0.28); }
+  .col .btn { padding-left: 8px; padding-right: 8px; white-space: nowrap; }
+  .field.blue label { color: #8fb8e8; }
+  .field.blue input { background: rgba(110, 160, 225, 0.16); border-color: rgba(110, 160, 225, 0.55); }
   .field.wide { grid-column: 1 / -1; }
   label, .label { font-size: 13px; color: var(--muted); font-weight: 500; }
   input, textarea {
@@ -224,29 +231,35 @@
         <input id="bean" type="text" list="beans" placeholder="Sorte oder Röstung">
         <datalist id="beans"></datalist>
       </div>
-      <div class="field">
-        <label for="dose">Mahlmenge (g)</label>
-        <input id="dose" type="text" inputmode="decimal" placeholder="18">
-      </div>
-      <div class="field">
-        <label for="mtime">Mahldauer (s)</label>
-        <input id="mtime" type="text" inputmode="decimal" placeholder="7,5">
-      </div>
-      <div class="field">
-        <label for="grind">Mahlgrad</label>
-        <input id="grind" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="12">
-      </div>
-      <div class="field">
-        <span class="label">Stoppuhr</span>
-        <button type="button" class="btn" id="stopBtn" aria-live="polite">Start</button>
-      </div>
-      <div class="field">
-        <label for="yield">Kaffeemenge (g)</label>
-        <input id="yield" type="text" inputmode="decimal" placeholder="36">
-      </div>
-      <div class="field">
-        <label for="time">Bezugdauer (s)</label>
-        <input id="time" type="text" inputmode="decimal" placeholder="27">
+      <div class="cols">
+        <div class="col col-mill">
+          <div class="field blue">
+            <label for="dose">Mahlmenge (g)</label>
+            <input id="dose" type="text" inputmode="decimal" placeholder="18">
+          </div>
+          <div class="field">
+            <label for="grind">Mahlgrad</label>
+            <input id="grind" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="12">
+          </div>
+          <div class="field">
+            <label for="mtime">Mahldauer (s)</label>
+            <input id="mtime" type="text" inputmode="decimal" placeholder="7,5">
+          </div>
+        </div>
+        <div class="col col-shot">
+          <div class="field blue">
+            <label for="yield">Kaffeemenge (g)</label>
+            <input id="yield" type="text" inputmode="decimal" placeholder="36">
+          </div>
+          <div class="field">
+            <span class="label">Stoppuhr</span>
+            <button type="button" class="btn" id="stopBtn" aria-live="polite">Start</button>
+          </div>
+          <div class="field">
+            <label for="time">Bezugdauer (s)</label>
+            <input id="time" type="text" inputmode="decimal" placeholder="27">
+          </div>
+        </div>
       </div>
       <div class="field wide">
         <span class="label" id="tasteLabel">Geschmack</span>
@@ -837,6 +850,7 @@
 
   /* Version und Änderungsprotokoll (neueste zuerst). Bei jeder Änderung hier oben ergänzen. */
   var CHANGELOG = [
+    { v: "1.11.3", t: "2026-11-22 19:31", x: "Eingabekacheln spaltenweise gruppiert (Mühle grün, Bezug rot), Input/Output blau, neue Reihenfolge" },
     { v: "1.11.2", t: "2026-11-22 13:50", x: "Datum und Uhrzeit nur als Angabe, neue Anordnung der Eingabekacheln" },
     { v: "1.11.1", t: "2026-11-22 13:35", x: "Mahlkonus aus der App entfernt (Formular, Verlauf, Grafik, CSV); gespeicherte Konus-Werte gelöscht" },
     { v: "1.11", t: "2026-11-22 08:30", x: "Mehrere Kaffeemühlen mit eigenen Daten, Anleitung als «?», Verlaufszeile mit MG, Konus nur bei vorhandenem Wert" },
