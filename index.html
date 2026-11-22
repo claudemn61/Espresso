@@ -577,6 +577,19 @@
         }).join(" ") + '" fill="none" stroke="var(--crema)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
       }).join("");
     }
+    if (isGrind) {
+      // Ausgleichsgerade (kleinste Quadrate) Zeit ~ Mahlgrad
+      var n = data.length, sx = 0, sy = 0, sxx = 0, sxy = 0;
+      data.forEach(function (s) { var gx0 = gv(s); sx += gx0; sy += s.time; sxx += gx0 * gx0; sxy += gx0 * s.time; });
+      var den = n * sxx - sx * sx;
+      if (Math.abs(den) > 1e-9) {
+        var m = (n * sxy - sx * sy) / den, c = (sy - m * sx) / n;
+        var xs = data.map(function (s) { return gv(s); });
+        var x1 = Math.min.apply(null, xs), x2 = Math.max.apply(null, xs);
+        var y1 = Math.max(lo, Math.min(hi, m * x1 + c)), y2 = Math.max(lo, Math.min(hi, m * x2 + c));
+        line += '<line x1="' + gx(x1).toFixed(1) + '" y1="' + y(y1).toFixed(1) + '" x2="' + gx(x2).toFixed(1) + '" y2="' + y(y2).toFixed(1) + '" stroke="var(--text)" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.7"/>';
+      }
+    }
     var dots = data.map(function (s, i) {
       return '<circle cx="' + x(s, i).toFixed(1) + '" cy="' + y(s.time).toFixed(1) + '" r="' + (isGrind ? 5 : 4) + '" fill="' + colorOf(s.time) + '" stroke="var(--surface-2)" stroke-width="1.5"/>';
     }).join("");
@@ -603,7 +616,7 @@
       '<text x="' + (L - 6) + '" y="' + (y(25) + 4).toFixed(1) + '" text-anchor="end" font-size="11" fill="var(--muted)">25</text>' +
       line + dots + labels + "</svg>";
     box.innerHTML = ctrl + '<p class="cap">Bezugszeit in s, Zielband 25–30 s. ' +
-      (isGrind ? "Unten: " + axisName + ". Zahl neben dem Punkt: Nr. im Verlauf." : "Unten: Nr. im Verlauf. Die Linie bricht bei einem Wechsel des Mahlkonus ab.") + "</p>" + svg;
+      (isGrind ? "Unten: " + axisName + ". Zahl neben dem Punkt: Nr. im Verlauf. Gestrichelt: Trendlinie." : "Unten: Nr. im Verlauf. Die Linie bricht bei einem Wechsel des Mahlkonus ab.") + "</p>" + svg;
   }
 
   $("trend").addEventListener("click", function (e) {
