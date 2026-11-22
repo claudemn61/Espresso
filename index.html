@@ -106,8 +106,25 @@
   .shot-bean { font-family: var(--display); font-weight: 700; font-size: 17px; overflow-wrap: anywhere; }
   .shot-nr { display: inline-block; min-width: 28px; text-align: center; margin-right: 8px; padding: 1px 8px; border-radius: 999px; background: var(--crema); color: var(--crema-ink); font-family: var(--body); font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; vertical-align: 2px; }
   .shot-date { color: var(--muted); font-size: 13px; white-space: nowrap; }
-  .shot-nums { display: flex; flex-wrap: wrap; gap: 6px 14px; font-variant-numeric: tabular-nums; }
-  .shot-nums span b { font-weight: 700; }
+  .head-left { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .head-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .sub { font: inherit; font-size: 15px; color: var(--muted); background: none; border: 0; padding: 4px 0; min-height: 36px; display: flex; align-items: center; gap: 6px; cursor: pointer; text-align: left; overflow-wrap: anywhere; }
+  .sub .chev { color: var(--crema); }
+  .sub:focus-visible, .help:focus-visible { outline: 2px solid var(--crema); outline-offset: 2px; border-radius: 10px; }
+  .help { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--crema); background: transparent; color: var(--crema); font: inherit; font-weight: 700; font-size: 18px; cursor: pointer; }
+  .gr-hint { margin: 0; color: var(--muted); font-size: 14px; }
+  .grinders { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  .gr { background: var(--surface-2); border: 1px solid var(--line); border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+  .gr.active { border-color: var(--crema); }
+  .gr-main { font: inherit; color: var(--text); background: none; border: 0; padding: 4px 4px; min-height: 44px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; cursor: pointer; text-align: left; width: 100%; }
+  .gr-name { font-family: var(--display); font-weight: 700; font-size: 17px; overflow-wrap: anywhere; }
+  .gr-count { color: var(--muted); font-size: 13px; }
+  .gr-actions, .gr-edit { display: flex; gap: 8px; flex-wrap: wrap; }
+  .gr-edit input { flex: 1 1 160px; }
+  .gr-add { display: flex; flex-direction: column; gap: 6px; }
+  .shot-line { display: flex; flex-wrap: nowrap; gap: 6px 12px; font-size: 14px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .shot-time { display: flex; align-items: baseline; gap: 16px; font-variant-numeric: tabular-nums; }
+  .shot-line b, .shot-time b { font-weight: 700; }
   .pill { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); }
   .pill.ex { color: var(--muted); font-weight: 500; }
   .pill.t-ausgewogen { border-color: var(--good); color: var(--good); }
@@ -161,39 +178,18 @@
 <body>
 <main>
   <header>
-    <div class="title">
-      <h1>Espresso Log</h1>
-      <button type="button" class="ver" id="verBtn" aria-haspopup="dialog" aria-label="Version und Änderungsprotokoll öffnen"></button>
+    <div class="head-left">
+      <div class="title">
+        <h1>Espresso Log</h1>
+        <button type="button" class="ver" id="verBtn" aria-haspopup="dialog" aria-label="Version und Änderungsprotokoll öffnen"></button>
+      </div>
+      <button type="button" class="sub" id="grBtn" aria-haspopup="dialog" aria-label="Kaffeemühle wählen oder verwalten"><span id="grName"></span><span class="chev" aria-hidden="true">▾</span></button>
     </div>
-    <div class="count" id="count" aria-live="polite"></div>
+    <div class="head-right">
+      <div class="count" id="count" aria-live="polite"></div>
+      <button type="button" class="help" id="helpBtn" aria-haspopup="dialog" aria-label="Anleitung: So findest du den Mahlgrad">?</button>
+    </div>
   </header>
-
-  <details class="guide" id="guide">
-    <summary>So findest du den Mahlgrad</summary>
-    <div class="guide-body">
-      <ol>
-        <li><b>Ausgangswerte festlegen.</b> Input = Korbgrösse (meist 18 g), Output = doppelte Menge (36 g, Verhältnis 1 : 2), Zielzeit 25–30 s. Stelle die Mühle auf eine mittlere Stufe und notiere die Raststufe.</li>
-        <li><b>Bezug ziehen und messen.</b> Mehl auf 0,1 g abwiegen. Tasse samt Waage unter den Auslauf stellen, Stoppuhr mit dem Pumpenstart starten und beim Zielgewicht (36 g) die Pumpe stoppen.</li>
-        <li><b>Eintragen.</b> Trage Input, Output, Zeit und Geschmack unter «Neuer Bezug» ein und speichere. Bohne, Mahlgrad und Mengen bleiben stehen, du änderst nur, was sich ändert.</li>
-        <li><b>Mahlgrad anpassen.</b> Die App zeigt dir die Bewertung der Zeit. Nur den Mahlgrad verändern, immer um eine Raststufe, Dosis und Output bleiben gleich.</li>
-        <li><b>Mühle leerlaufen lassen.</b> Nach jeder Verstellung die ersten 5–10 g verwerfen, weil noch Mehl vom alten Mahlgrad in der Mühle steckt. Erst der zweite Bezug zählt.</li>
-        <li><b>Geschmack prüfen.</b> Liegt die Zeit im Zielbereich, entscheidet der Geschmack (siehe Tabelle). Ändere dann die Ausbeute, nicht die Dosis.</li>
-        <li><b>Einstellung bestätigen.</b> Zwei bis drei Bezüge in Folge mit höchstens ±2 s Abweichung und gleichem Geschmack gelten als fertig. Die Raststufe ist dein Wert für diese Bohne.</li>
-      </ol>
-      <p><b>Zeit messen:</b> Gemessen wird ab Pumpenstart, also inklusive Vorinfusion, nicht ab dem ersten Tropfen. Bei vielen Siebträgermaschinen (z. B. mit E61-Brühgruppe) tritt der Kaffee erst nach 5–8 s aus, das ist normal. Misst du ab dem ersten Tropfen, liegt die Zielzeit etwa 5–8 s tiefer (ca. 20–25 s). Wichtig ist, immer gleich zu messen, sonst sind die Zeiten nicht vergleichbar.</p>
-      <table class="rules">
-        <thead><tr><th>Beobachtung</th><th>Massnahme</th></tr></thead>
-        <tbody>
-          <tr><td>Unter 25 s, sauer oder dünn</td><td>Eine Stufe feiner mahlen</td></tr>
-          <tr><td>Über 30 s, bitter oder trocken</td><td>Eine Stufe gröber mahlen</td></tr>
-          <tr><td>25–30 s, aber sauer</td><td>Ausbeute erhöhen (z. B. 40 g) oder etwas feiner</td></tr>
-          <tr><td>25–30 s, aber bitter</td><td>Ausbeute senken (z. B. 32 g) oder etwas gröber</td></tr>
-          <tr><td>25–30 s, ausgewogen</td><td>Fertig, Stufe notieren</td></tr>
-        </tbody>
-      </table>
-      <p>Bei jeder neuen Bohnensorte und etwa alle ein bis zwei Wochen mit derselben Bohne neu nachstellen, weil frisch geröstete Bohnen im Lauf der Zeit schneller durchlaufen.</p>
-    </div>
-  </details>
 
   <section class="card" aria-labelledby="newTitle">
     <div class="card-head"><h2 id="newTitle">Neuer Bezug</h2></div>
@@ -215,7 +211,7 @@
         <datalist id="beans"></datalist>
       </div>
       <div class="field">
-        <label for="grind">Mahlgrad (Raststufe)</label>
+        <label for="grind">MG (Raststufe)</label>
         <input id="grind" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="z. B. 12">
       </div>
       <div class="field">
@@ -277,6 +273,50 @@
   </footer>
 </main>
 
+<div class="sheet" id="helpSheet" hidden role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div class="sheet-panel">
+    <div class="card-head"><h2 id="helpTitle">So findest du den Mahlgrad</h2><button type="button" class="btn small" id="helpClose">Schliessen</button></div>
+    <div class="guide-body">
+      <ol>
+        <li><b>Ausgangswerte festlegen.</b> Input = Korbgrösse (meist 18 g), Output = doppelte Menge (36 g, Verhältnis 1 : 2), Zielzeit 25–30 s. Stelle die Mühle auf eine mittlere Stufe und notiere die Raststufe.</li>
+        <li><b>Bezug ziehen und messen.</b> Mehl auf 0,1 g abwiegen. Tasse samt Waage unter den Auslauf stellen, Stoppuhr mit dem Pumpenstart starten und beim Zielgewicht (36 g) die Pumpe stoppen.</li>
+        <li><b>Eintragen.</b> Trage Input, Output, Zeit und Geschmack unter «Neuer Bezug» ein und speichere. Bohne, Mahlgrad und Mengen bleiben stehen, du änderst nur, was sich ändert.</li>
+        <li><b>Mahlgrad anpassen.</b> Die App zeigt dir die Bewertung der Zeit. Nur den Mahlgrad verändern, immer um eine Raststufe, Dosis und Output bleiben gleich.</li>
+        <li><b>Mühle leerlaufen lassen.</b> Nach jeder Verstellung die ersten 5–10 g verwerfen, weil noch Mehl vom alten Mahlgrad in der Mühle steckt. Erst der zweite Bezug zählt.</li>
+        <li><b>Geschmack prüfen.</b> Liegt die Zeit im Zielbereich, entscheidet der Geschmack (siehe Tabelle). Ändere dann die Ausbeute, nicht die Dosis.</li>
+        <li><b>Einstellung bestätigen.</b> Zwei bis drei Bezüge in Folge mit höchstens ±2 s Abweichung und gleichem Geschmack gelten als fertig. Die Raststufe ist dein Wert für diese Bohne.</li>
+      </ol>
+      <p><b>Zeit messen:</b> Gemessen wird ab Pumpenstart, also inklusive Vorinfusion, nicht ab dem ersten Tropfen. Bei vielen Siebträgermaschinen (z. B. mit E61-Brühgruppe) tritt der Kaffee erst nach 5–8 s aus, das ist normal. Misst du ab dem ersten Tropfen, liegt die Zielzeit etwa 5–8 s tiefer (ca. 20–25 s). Wichtig ist, immer gleich zu messen, sonst sind die Zeiten nicht vergleichbar.</p>
+      <table class="rules">
+        <thead><tr><th>Beobachtung</th><th>Massnahme</th></tr></thead>
+        <tbody>
+          <tr><td>Unter 25 s, sauer oder dünn</td><td>Eine Stufe feiner mahlen</td></tr>
+          <tr><td>Über 30 s, bitter oder trocken</td><td>Eine Stufe gröber mahlen</td></tr>
+          <tr><td>25–30 s, aber sauer</td><td>Ausbeute erhöhen (z. B. 40 g) oder etwas feiner</td></tr>
+          <tr><td>25–30 s, aber bitter</td><td>Ausbeute senken (z. B. 32 g) oder etwas gröber</td></tr>
+          <tr><td>25–30 s, ausgewogen</td><td>Fertig, Stufe notieren</td></tr>
+        </tbody>
+      </table>
+      <p>Bei jeder neuen Bohnensorte und etwa alle ein bis zwei Wochen mit derselben Bohne neu nachstellen, weil frisch geröstete Bohnen im Lauf der Zeit schneller durchlaufen.</p>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="grSheet" hidden role="dialog" aria-modal="true" aria-labelledby="grTitle">
+  <div class="sheet-panel">
+    <div class="card-head"><h2 id="grTitle">Kaffeemühlen</h2><button type="button" class="btn small" id="grClose">Schliessen</button></div>
+    <p class="gr-hint">Jede Kaffeemühle hat eigene Bezüge, Grafiken und Bohnen.</p>
+    <ul class="grinders" id="grList"></ul>
+    <form class="gr-add" id="grAdd" autocomplete="off">
+      <label for="grNew">Neue Kaffeemühle</label>
+      <div class="time-row">
+        <input id="grNew" type="text" maxlength="40" placeholder="Name, z. B. Eureka Mignon">
+        <button type="submit" class="btn small">Hinzufügen</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div class="sheet" id="logSheet" hidden role="dialog" aria-modal="true" aria-labelledby="logTitle">
   <div class="sheet-panel">
     <div class="card-head"><h2 id="logTitle">Änderungsprotokoll</h2><button type="button" class="btn small" id="logClose">Schliessen</button></div>
@@ -288,7 +328,6 @@
 (function () {
   "use strict";
   var KEY = "espresso-log-v1";
-  var mem = null;
   var $ = function (id) { return document.getElementById(id); };
 
   function today() {
@@ -320,19 +359,42 @@
       { id: "ex3", ex: true, date: d, bean: "Beispiel: Hausmischung", grind: "8", dose: 18, yld: 36, time: 38, taste: "bitter", note: "Zu langsam, wieder gröber." }
     ];
   }
-  function load() {
+  var DBKEY = "espresso-log-v2";
+  var memDb = null;
+  function newId() { return "g" + Date.now().toString(36) + Math.floor(Math.random() * 1296).toString(36); }
+  function loadDb() {
     try {
-      var r = localStorage.getItem(KEY);
-      if (r) return JSON.parse(r);
+      var r = localStorage.getItem(DBKEY);
+      if (r) {
+        var d = JSON.parse(r);
+        if (d && Array.isArray(d.grinders) && d.grinders.length) return d;
+      }
     } catch (e) {}
-    return mem;
+    if (memDb) return memDb;
+    var old = null;
+    try {
+      var o = localStorage.getItem(KEY);
+      if (o) old = JSON.parse(o);
+    } catch (e) {}
+    var g = { id: newId(), name: "Meine Kaffeemühle", shots: Array.isArray(old) ? old : seed() };
+    return { v: 2, current: g.id, grinders: [g] };
+  }
+  var db = loadDb();
+  function cur() {
+    for (var i = 0; i < db.grinders.length; i++) {
+      if (db.grinders[i].id === db.current) return db.grinders[i];
+    }
+    db.current = db.grinders[0].id;
+    return db.grinders[0];
   }
   function persist() {
-    mem = shots;
-    try { localStorage.setItem(KEY, JSON.stringify(shots)); } catch (e) {}
+    cur().shots = shots;
+    memDb = db;
+    try { localStorage.setItem(DBKEY, JSON.stringify(db)); } catch (e) {}
   }
 
-  var shots = load() || seed();
+  var shots = cur().shots;
+  persist();
   var taste = "";
   var armedDelete = null;
   var editId = null;
@@ -390,9 +452,13 @@
   var axis = "nr";
   try { var a = localStorage.getItem(AXIS_KEY); axis = a === "grind" || a === "burr" ? a : "nr"; } catch (e) {}
 
-  var KKEY = KEY + "-konus";
+  function kkey() { return KEY + "-konus-" + db.current; }
   var kfilter = "all";
-  try { kfilter = localStorage.getItem(KKEY) || "all"; } catch (e) {}
+  function loadK() {
+    kfilter = "all";
+    try { kfilter = localStorage.getItem(kkey()) || "all"; } catch (e) {}
+  }
+  loadK();
   function burrOf(s) { return String(s.burr == null ? "" : s.burr).trim(); }
   function burrValues() {
     var seen = {};
@@ -403,16 +469,17 @@
   function renderTrend() {
     var nr = numbers();
     var box = $("trend");
+    var kvals = burrValues();
+    if (axis === "burr" && !kvals.length) axis = "nr";
     var isGrind = axis !== "nr";
     var gkey = axis === "burr" ? "burr" : "grind";
-    var axisName = axis === "burr" ? "Mahlkonus" : "Mahlgrad";
+    var axisName = axis === "burr" ? "Mahlkonus" : "MG";
     function gv(s) { return num(s[gkey]); }
     var ctrl =
       '<div class="axis" role="group" aria-label="X-Achse wählen"><span class="label">X-Achse</span>' +
       '<button type="button" class="chip small" data-axis="nr" aria-pressed="' + (!isGrind) + '">Nr.</button>' +
-      '<button type="button" class="chip small" data-axis="grind" aria-pressed="' + (axis === "grind") + '">Mahlgrad</button>' +
-      '<button type="button" class="chip small" data-axis="burr" aria-pressed="' + (axis === "burr") + '">Mahlkonus</button></div>';
-    var kvals = burrValues();
+      '<button type="button" class="chip small" data-axis="grind" aria-pressed="' + (axis === "grind") + '">MG</button>' +
+      (kvals.length ? '<button type="button" class="chip small" data-axis="burr" aria-pressed="' + (axis === "burr") + '">Mahlkonus</button>' : "") + "</div>";
     if (kfilter !== "all" && kvals.indexOf(kfilter) < 0) kfilter = "all";
     if (kvals.length) {
       ctrl += '<div class="axis" role="group" aria-label="Mahlkonus zur Anzeige wählen"><span class="label">Konus</span>' +
@@ -503,7 +570,7 @@
     var kb = e.target.closest("button[data-konus]");
     if (kb) {
       kfilter = kb.getAttribute("data-konus");
-      try { localStorage.setItem(KKEY, kfilter); } catch (err) {}
+      try { localStorage.setItem(kkey(), kfilter); } catch (err) {}
       renderTrend();
       return;
     }
@@ -528,11 +595,12 @@
       var armed = armedDelete === s.id;
       return '<li class="shot' + (editId === s.id ? " editing" : "") + '" data-id="' + esc(s.id) + '">' +
         '<div class="shot-top"><span class="shot-bean"><span class="shot-nr" aria-label="Nummer ' + nr[s.id] + '">' + nr[s.id] + '</span>' + esc(s.bean || "Ohne Bohnenname") + '</span><span class="shot-date">' + esc(fmtDate(s.date)) + "</span></div>" +
-        '<div class="shot-nums">' +
-        "<span>Mahlgrad <b>" + esc(s.grind || "–") + "</b></span>" +
+        '<div class="shot-line">' +
+        "<span>MG <b>" + esc(s.grind || "–") + "</b></span>" +
         (s.burr ? "<span>Konus <b>" + esc(s.burr) + "</b></span>" : "") +
         "<span><b>" + fmt(s.dose) + "</b> g rein</span>" +
-        "<span><b>" + fmt(s.yld) + "</b> g raus</span>" +
+        "<span><b>" + fmt(s.yld) + "</b> g raus</span></div>" +
+        '<div class="shot-time">' +
         '<span class="' + (tc || "") + '"><b>' + fmt(s.time, 0) + "</b> s</span>" +
         "<span>1 : <b>" + (r == null ? "–" : r.toFixed(1)) + "</b></span></div>" +
         "<div>" + (s.taste ? '<span class="pill t-' + esc(s.taste) + '">' + esc(s.taste) + "</span> " : "") + (s.ex ? '<span class="pill ex">Beispiel</span>' : "") + "</div>" +
@@ -547,7 +615,7 @@
   function renderAll() {
     var real = shots.filter(function (s) { return !s.ex; }).length;
     $("count").textContent = real === 1 ? "1 Bezug" : real + " Bezüge";
-    renderBeans(); renderTrend(); renderList();
+    renderHead(); renderBeans(); renderTrend(); renderList();
   }
 
   function setTaste(v) {
@@ -687,6 +755,9 @@
     });
     return [head.join(";")].concat(rows).join("\n");
   }
+  function slug(s) {
+    return String(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "muehle";
+  }
   function say(t) { $("status").textContent = t; }
   $("copyCsv").addEventListener("click", function () {
     var text = csv();
@@ -700,7 +771,7 @@
     try {
       var blob = new Blob(["﻿" + csv()], { type: "text/csv;charset=utf-8" });
       var a = document.createElement("a");
-      a.href = URL.createObjectURL(blob); a.download = "espresso-log.csv";
+      a.href = URL.createObjectURL(blob); a.download = "espresso-log-" + slug(cur().name) + ".csv";
       document.body.appendChild(a); a.click(); a.remove();
       say("CSV wird gespeichert.");
     } catch (e) { say("Speichern nicht möglich. Bitte CSV kopieren."); }
@@ -708,6 +779,7 @@
 
   /* Version und Änderungsprotokoll (neueste zuerst). Bei jeder Änderung hier oben ergänzen. */
   var CHANGELOG = [
+    { v: "1.11", t: "2026-11-22 08:30", x: "Mehrere Kaffeemühlen mit eigenen Daten, Anleitung als «?», Verlaufszeile mit MG, Konus nur bei vorhandenem Wert" },
     { v: "1.10.3", t: "2026-11-21 15:58", x: "Anleitung: Hinweis, wie die Bezugszeit gemessen wird (ab Pumpenstart)" },
     { v: "1.10.2", t: "2026-11-21 15:45", x: "Version neben dem Titel, Protokoll per Tipp darauf, mit Uhrzeit" },
     { v: "1.10.1", t: "2026-11-21 15:23", x: "Neue Versionen kommen beim Öffnen zuverlässiger an" },
@@ -737,8 +809,118 @@
   function closeLog() { $("logSheet").hidden = true; $("verBtn").focus(); }
   $("verBtn").addEventListener("click", openLog);
   $("logClose").addEventListener("click", closeLog);
-  $("logSheet").addEventListener("click", function (e) { if (e.target === this) closeLog(); });
-  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("logSheet").hidden) closeLog(); });
+  var BACK = { logSheet: "verBtn", helpSheet: "helpBtn", grSheet: "grBtn" };
+  function openSheet(id, focusId) { $(id).hidden = false; if (focusId) $(focusId).focus(); }
+  function closeSheet(id) { $(id).hidden = true; if (BACK[id]) $(BACK[id]).focus(); }
+  Array.prototype.forEach.call(document.querySelectorAll(".sheet"), function (sh) {
+    sh.addEventListener("click", function (e) { if (e.target === sh) closeSheet(sh.id); });
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape") return;
+    Object.keys(BACK).forEach(function (id) { if (!$(id).hidden) closeSheet(id); });
+  });
+  $("helpBtn").addEventListener("click", function () { openSheet("helpSheet", "helpClose"); });
+  $("helpClose").addEventListener("click", function () { closeSheet("helpSheet"); });
+
+  /* Kaffeemühlen: jede Mühle hat eigene Bezüge, Grafiken und Bohnen */
+  var renameId = null, armedGr = null;
+  function renderHead() { $("grName").textContent = cur().name; }
+  function clearForm() {
+    ["bean", "grind", "burr", "dose", "yield", "time", "note"].forEach(function (id) { $(id).value = ""; });
+    $("date").value = today();
+    setTaste("");
+  }
+  function activate() {
+    shots = cur().shots;
+    armedDelete = null;
+    endEdit();
+    clearForm();
+    loadK();
+    updateLive();
+    renderAll();
+    persist();
+  }
+  function switchGrinder(id) {
+    persist();
+    db.current = id;
+    activate();
+  }
+  function renderGrinders() {
+    $("grList").innerHTML = db.grinders.map(function (g) {
+      var active = g.id === db.current;
+      var list = active ? shots : g.shots;
+      var count = list.filter(function (s) { return !s.ex; }).length;
+      if (renameId === g.id) {
+        return '<li class="gr" data-id="' + esc(g.id) + '"><div class="gr-edit"><input type="text" id="grRename" maxlength="40" value="' + esc(g.name) + '" aria-label="Name der Kaffeemühle">' +
+          '<button type="button" class="btn small" data-gact="save">Speichern</button>' +
+          '<button type="button" class="btn small" data-gact="cancel">Abbrechen</button></div></li>';
+      }
+      var armed = armedGr === g.id;
+      return '<li class="gr' + (active ? " active" : "") + '" data-id="' + esc(g.id) + '">' +
+        '<button type="button" class="gr-main" data-gact="switch" aria-pressed="' + active + '"><span class="gr-name">' + esc(g.name) + '</span>' +
+        '<span class="gr-count">' + count + (count === 1 ? " Bezug" : " Bezüge") + (active ? " · aktiv" : "") + "</span></button>" +
+        '<div class="gr-actions"><button type="button" class="btn small" data-gact="rename">Umbenennen</button>' +
+        (db.grinders.length > 1 ? '<button type="button" class="btn small" data-gact="del">' + (armed ? "Alle Bezüge löschen?" : "Löschen") + "</button>" : "") +
+        "</div></li>";
+    }).join("");
+    if (renameId && $("grRename") && $("grRename").focus) { $("grRename").focus(); $("grRename").select(); }
+  }
+  function saveRename() {
+    var inp = $("grRename");
+    var v = inp ? inp.value.trim() : "";
+    if (!v) return;
+    var g = db.grinders.filter(function (x) { return x.id === renameId; })[0];
+    if (g) g.name = v;
+    renameId = null;
+    persist(); renderHead(); renderGrinders();
+  }
+  function deleteGrinder(id) {
+    if (db.grinders.length < 2) return;
+    var wasCurrent = db.current === id;
+    db.grinders = db.grinders.filter(function (g) { return g.id !== id; });
+    try { localStorage.removeItem(KEY + "-konus-" + id); } catch (e) {}
+    if (wasCurrent) { db.current = db.grinders[0].id; activate(); } else { persist(); }
+    renderGrinders();
+  }
+  $("grBtn").addEventListener("click", function () {
+    renameId = null; armedGr = null;
+    renderGrinders();
+    openSheet("grSheet", "grClose");
+  });
+  $("grClose").addEventListener("click", function () { closeSheet("grSheet"); });
+  $("grList").addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-gact]");
+    if (!b) return;
+    var li = b.closest(".gr");
+    var id = li.getAttribute("data-id");
+    var act = b.getAttribute("data-gact");
+    if (act === "switch") { if (id !== db.current) switchGrinder(id); closeSheet("grSheet"); }
+    else if (act === "rename") { renameId = id; armedGr = null; renderGrinders(); }
+    else if (act === "cancel") { renameId = null; renderGrinders(); }
+    else if (act === "save") { saveRename(); }
+    else if (act === "del") {
+      if (armedGr === id) { armedGr = null; deleteGrinder(id); }
+      else {
+        armedGr = id; renderGrinders();
+        setTimeout(function () { if (armedGr === id) { armedGr = null; renderGrinders(); } }, 3500);
+      }
+    }
+  });
+  $("grList").addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && e.target.id === "grRename") { e.preventDefault(); saveRename(); }
+  });
+  $("grAdd").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var name = $("grNew").value.trim();
+    if (!name) return;
+    persist();
+    var g = { id: newId(), name: name, shots: [] };
+    db.grinders.push(g);
+    db.current = g.id;
+    $("grNew").value = "";
+    activate();
+    closeSheet("grSheet");
+  });
 
   ["grind", "burr"].forEach(function (id) {
     $(id).addEventListener("input", function () {
