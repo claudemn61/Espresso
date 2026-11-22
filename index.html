@@ -289,7 +289,7 @@
       <ol>
         <li><b>Ausgangswerte festlegen.</b> Input = Korbgrösse (meist 18 g), Output = doppelte Menge (36 g, Verhältnis 1 : 2), Zielzeit 25–30 s. Stelle die Mühle auf eine mittlere Stufe und notiere die Raststufe.</li>
         <li><b>Bezug ziehen und messen.</b> Mehl auf 0,1 g abwiegen. Tasse samt Waage unter den Auslauf stellen, Stoppuhr mit dem Pumpenstart starten und beim Zielgewicht (36 g) die Pumpe stoppen.</li>
-        <li><b>Eintragen.</b> Trage Input, Output, Zeit und Geschmack unter «Neuer Bezug» ein und speichere. Bohne, Mahlgrad und Mengen bleiben stehen, du änderst nur, was sich ändert.</li>
+        <li><b>Eintragen.</b> Trage Input, Output, Zeit und Geschmack unter «Neuer Bezug» ein und speichere. Alle Werte des letzten Bezugs werden übernommen, ausser der Zeit. Du änderst nur, was sich ändert.</li>
         <li><b>Mahlgrad anpassen.</b> Die App zeigt dir die Bewertung der Zeit. Nur den Mahlgrad verändern, immer um eine Raststufe, Dosis und Output bleiben gleich.</li>
         <li><b>Mühle leerlaufen lassen.</b> Nach jeder Verstellung die ersten 5–10 g verwerfen, weil noch Mehl vom alten Mahlgrad in der Mühle steckt. Erst der zweite Bezug zählt.</li>
         <li><b>Geschmack prüfen.</b> Liegt die Zeit im Zielbereich, entscheidet der Geschmack (siehe Tabelle). Ändere dann die Ausbeute, nicht die Dosis.</li>
@@ -684,7 +684,7 @@
   }
   $("cancelEdit").addEventListener("click", function () {
     endEdit();
-    $("date").value = today(); $("time").value = ""; $("note").value = ""; setTaste("");
+    prefillLast();
     updateLive(); renderList();
   });
 
@@ -716,8 +716,8 @@
       shots.push(entry);
     }
     persist();
-    // Bohne, Mahlgrad und Mengen bleiben für den nächsten Versuch stehen
-    $("time").value = ""; $("note").value = ""; setTaste("");
+    // Nächste Messung: alle Werte des letzten Bezugs übernehmen, nur die Zeit nicht
+    prefillLast();
     updateLive(); renderAll();
     var st = $("status");
     st.textContent = msg;
@@ -839,11 +839,25 @@
     $("date").value = today();
     setTaste("");
   }
+  function prefillLast() {
+    clearForm();
+    var real = chrono().filter(function (s) { return !s.ex; });
+    if (!real.length) return;
+    var s = real[real.length - 1];
+    $("bean").value = s.bean || "";
+    $("grind").value = s.grind || "";
+    $("mtime").value = s.mtime == null ? "" : s.mtime;
+    $("burr").value = s.burr || "";
+    $("dose").value = s.dose == null ? "" : s.dose;
+    $("yield").value = s.yld == null ? "" : s.yld;
+    $("note").value = s.note || "";
+    setTaste(s.taste || "");
+  }
   function activate() {
     shots = cur().shots;
     armedDelete = null;
     endEdit();
-    clearForm();
+    prefillLast();
     loadK();
     updateLive();
     renderAll();
@@ -942,7 +956,7 @@
     });
   });
 
-  $("date").value = today();
+  prefillLast();
   updateLive(); renderAll();
 
   if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
