@@ -59,7 +59,7 @@
   .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 
   .ratio { display: flex; align-items: center; justify-content: space-between; gap: 16px; background: var(--surface-2); border-radius: 14px; padding: 14px 16px; }
-  .ratio-num { font-family: var(--display); font-size: 40px; line-height: 1; font-variant-numeric: tabular-nums; }
+  .ratio-num { white-space: nowrap; flex-shrink: 0; font-family: var(--display); font-size: 40px; line-height: 1; font-variant-numeric: tabular-nums; }
   .ratio-num small { font-size: 16px; color: var(--muted); font-family: var(--body); margin-left: 4px; }
   .ratio-hint { font-size: 14px; text-align: right; color: var(--muted); max-width: 190px; }
   .tag { display: inline-block; font-weight: 700; }
@@ -456,7 +456,7 @@
     var hint = $("ratioHint");
     if (t == null) {
       hint.className = "ratio-hint";
-      hint.textContent = r == null ? "Dosis und Ausbeute eintragen." : "Zeit eintragen oder messen.";
+      hint.textContent = r == null ? "Dosis und Ausbeute eintragen." : "Verhältnis Input/Output";
     } else {
       hint.className = "ratio-hint";
       hint.innerHTML = '<span class="tag ' + timeClass(t) + '">' + esc(fmt(t, 0)) + ' s</span><br>' + esc(timeHint(t));
