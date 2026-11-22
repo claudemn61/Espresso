@@ -86,6 +86,7 @@
     border: 1px solid var(--line); border-radius: 12px; padding: 12px 12px; min-height: 46px;
     font-variant-numeric: tabular-nums;
   }
+  select { width: 100%; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 12px 12px; min-height: 46px; font-variant-numeric: tabular-nums; }
   textarea { resize: vertical; min-height: 64px; }
   input:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid var(--crema); outline-offset: 2px; }
   input[type="date"] { appearance: none; -webkit-appearance: none; }
@@ -94,6 +95,8 @@
   .time-row input { flex: 1; }
 
   .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  #tasteChips { flex-wrap: nowrap; gap: 6px; }
+  #tasteChips .chip { flex: 1 1 auto; min-width: 0; padding: 9px 4px; font-size: clamp(11px, 3.4vw, 14px); white-space: nowrap; text-align: center; }
   .chip { font: inherit; font-size: 14px; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 9px 14px; min-height: 40px; cursor: pointer; }
   .chip[aria-pressed="true"] { background: var(--crema); color: var(--crema-ink); border-color: var(--crema); font-weight: 700; }
 
@@ -157,6 +160,9 @@
 
   .empty { color: var(--muted); text-align: center; padding: 14px 6px; margin: 0; }
   .export { display: flex; gap: 8px; flex-wrap: wrap; }
+  .card.compact { padding: 10px 14px; gap: 6px; }
+  .card.compact .card-head { align-items: center; }
+  .status:empty { display: none; }
   .status { min-height: 20px; font-size: 14px; color: var(--muted); margin: 0; }
   #csvBox { display: none; font-size: 12px; min-height: 120px; }
   footer p { margin: 0 0 8px; }
@@ -239,7 +245,7 @@
           </div>
           <div class="field">
             <label for="grind">Mahlgrad</label>
-            <input id="grind" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="12">
+            <select id="grind" aria-label="Mahlgrad"></select>
           </div>
           <div class="field">
             <label for="mtime">Mahldauer (s)</label>
@@ -289,11 +295,12 @@
     </div>
   </section>
 
-  <section class="card" aria-labelledby="expTitle">
-    <div class="card-head"><h2 id="expTitle">Export</h2></div>
-    <div class="export">
-      <button type="button" class="btn small" id="copyCsv">CSV kopieren</button>
-      <button type="button" class="btn small" id="saveCsv">CSV speichern</button>
+  <section class="card compact" aria-labelledby="expTitle">
+    <div class="card-head"><h2 id="expTitle">Export</h2>
+      <div class="export">
+        <button type="button" class="btn small" id="copyCsv">CSV kopieren</button>
+        <button type="button" class="btn small" id="saveCsv">CSV speichern</button>
+      </div>
     </div>
     <p class="status" id="status" role="status"></p>
     <textarea id="csvBox" readonly aria-label="CSV zum Kopieren"></textarea>
@@ -722,7 +729,7 @@
     $("clock").value = shotClock(s);
     showStamp();
     $("bean").value = s.bean || "";
-    $("grind").value = s.grind || ""; $("mtime").value = s.mtime == null ? "" : s.mtime;
+    setGrind(s.grind); $("mtime").value = s.mtime == null ? "" : s.mtime;
     $("dose").value = s.dose == null ? "" : s.dose;
     $("yield").value = s.yld == null ? "" : s.yld;
     $("time").value = s.time == null ? "" : s.time;
@@ -798,7 +805,7 @@
     if (btn.getAttribute("data-act") === "reuse") {
       setSaved(false);
       $("bean").value = s.ex ? "" : s.bean || "";
-      $("grind").value = s.grind || ""; $("mtime").value = s.mtime == null ? "" : s.mtime;
+      setGrind(s.grind); $("mtime").value = s.mtime == null ? "" : s.mtime;
       $("dose").value = s.dose == null ? "" : s.dose;
       $("yield").value = s.yld == null ? "" : s.yld;
       $("time").value = ""; $("note").value = ""; setTaste("");
@@ -911,6 +918,19 @@
     setHist(histOpen);
     try { localStorage.setItem(HIST_KEY, histOpen ? "1" : "0"); } catch (e) {}
   });
+  (function () {
+    var o = '<option value="">–</option>';
+    for (var i = 1; i <= 60; i++) o += '<option value="' + i + '">' + i + "</option>";
+    $("grind").innerHTML = o;
+  })();
+  function setGrind(v) {
+    v = v == null ? "" : String(v).trim();
+    var sel = $("grind");
+    if (v && !Array.prototype.some.call(sel.options || [], function (o) { return o.value === v; })) {
+      sel.innerHTML += '<option value="' + esc(v) + '">' + esc(v) + "</option>";
+    }
+    sel.value = v;
+  }
   function renderHead() { $("grName").textContent = cur().name; $("histGr").textContent = cur().name; }
   function showStamp() {
     var d = $("date").value, c = $("clock").value;
@@ -933,7 +953,7 @@
     if (!real.length) return;
     var s = real[real.length - 1];
     $("bean").value = s.bean || "";
-    $("grind").value = s.grind || "";
+    setGrind(s.grind);
     $("mtime").value = s.mtime == null ? "" : s.mtime;
     $("dose").value = s.dose == null ? "" : s.dose;
     $("yield").value = s.yld == null ? "" : s.yld;
