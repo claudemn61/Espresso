@@ -132,7 +132,7 @@
   .sl-left, .sl-right { display: flex; flex-wrap: wrap; gap: 4px 11px; }
   .sl-right { justify-content: flex-end; margin-left: auto; }
   .shot-line span { white-space: nowrap; }
-  .triple { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .triple { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .shot-time { display: flex; align-items: baseline; gap: 16px; font-variant-numeric: tabular-nums; }
   .shot-line b, .shot-time b { font-weight: 700; }
   .pill { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); }
@@ -231,10 +231,6 @@
         <div class="field">
           <label for="mtime">M.sek.</label>
           <input id="mtime" type="text" inputmode="decimal" placeholder="7,5">
-        </div>
-        <div class="field">
-          <label for="burr">K.</label>
-          <input id="burr" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="2">
         </div>
       </div>
       <div class="field">
@@ -425,6 +421,12 @@
     try { localStorage.setItem(DBKEY, JSON.stringify(db)); } catch (e) {}
   }
 
+  // Konus entfernt (ab 1.11.1): gespeicherte Konus-Werte und Filter löschen
+  db.grinders.forEach(function (g) {
+    (g.shots || []).forEach(function (s) { delete s.burr; });
+    try { localStorage.removeItem(KEY + "-konus-" + g.id); } catch (e) {}
+  });
+  if (axis === "burr") axis = "nr";
   var shots = cur().shots;
   persist();
   var taste = "";
@@ -488,45 +490,22 @@
 
   var AXIS_KEY = KEY + "-axis";
   var axis = "nr";
-  try { var a = localStorage.getItem(AXIS_KEY); axis = a === "grind" || a === "burr" ? a : "nr"; } catch (e) {}
-
-  function kkey() { return KEY + "-konus-" + db.current; }
-  var kfilter = "all";
-  function loadK() {
-    kfilter = "all";
-    try { kfilter = localStorage.getItem(kkey()) || "all"; } catch (e) {}
-  }
-  loadK();
-  function burrOf(s) { return String(s.burr == null ? "" : s.burr).trim(); }
-  function burrValues() {
-    var seen = {};
-    shots.forEach(function (s) { var b = burrOf(s); if (b) seen[b] = 1; });
-    return Object.keys(seen).sort(function (a, b) { return (parseFloat(a) - parseFloat(b)) || (a < b ? -1 : a > b ? 1 : 0); });
-  }
+  try { var a = localStorage.getItem(AXIS_KEY); axis = a === "grind" ? a : "nr"; } catch (e) {}
 
   function renderTrend() {
     var nr = numbers();
     var box = $("trend");
-    var kvals = burrValues();
-    if (axis === "burr" && !kvals.length) axis = "nr";
     var isGrind = axis !== "nr";
-    var gkey = axis === "burr" ? "burr" : "grind";
-    var axisName = axis === "burr" ? "K." : "MG";
+    var gkey = "grind";
+    var axisName = "MG";
     function gv(s) { return num(s[gkey]); }
     var ctrl =
       '<div class="axis" role="group" aria-label="X-Achse wählen"><span class="label">X-Achse</span>' +
       '<button type="button" class="chip small" data-axis="nr" aria-pressed="' + (!isGrind) + '">Nr.</button>' +
       '<button type="button" class="chip small" data-axis="grind" aria-pressed="' + (axis === "grind") + '">MG</button>' +
-      (kvals.length ? '<button type="button" class="chip small" data-axis="burr" aria-pressed="' + (axis === "burr") + '">K.</button>' : "") + "</div>";
-    if (kfilter !== "all" && kvals.indexOf(kfilter) < 0) kfilter = "all";
-    if (kvals.length) {
-      ctrl += '<div class="axis" role="group" aria-label="Mahlkonus zur Anzeige wählen"><span class="label">K.</span>' +
-        ["all"].concat(kvals).map(function (v) {
-          return '<button type="button" class="chip small" data-konus="' + esc(v) + '" aria-pressed="' + (kfilter === v) + '">' + (v === "all" ? "alle" : esc(v)) + "</button>";
-        }).join("") + "</div>";
-    }
+      "</div>";
     var all = chrono().filter(function (s) {
-      return s.time != null && (kfilter === "all" || burrOf(s) === kfilter);
+      return s.time != null;
     });
     var data = isGrind
       ? all.filter(function (s) { return gv(s) != null; }).slice(-60)
@@ -564,18 +543,9 @@
     }
     var line = "";
     if (!isGrind) {
-      // Linie nur zwischen aufeinanderfolgenden Bezügen mit gleichem Mahlkonus
-      var segs = [], cur = [];
-      data.forEach(function (s, i) {
-        if (cur.length && burrOf(cur[cur.length - 1].s) !== burrOf(s)) { segs.push(cur); cur = []; }
-        cur.push({ s: s, i: i });
-      });
-      if (cur.length) segs.push(cur);
-      line = segs.filter(function (sg) { return sg.length > 1; }).map(function (sg) {
-        return '<polyline points="' + sg.map(function (p) {
-          return x(p.s, p.i).toFixed(1) + "," + y(p.s.time).toFixed(1);
-        }).join(" ") + '" fill="none" stroke="var(--crema)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
-      }).join("");
+      line = '<polyline points="' + data.map(function (s, i) {
+        return x(s, i).toFixed(1) + "," + y(s.time).toFixed(1);
+      }).join(" ") + '" fill="none" stroke="var(--crema)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
     }
     if (isGrind) {
       // Ausgleichsgerade (kleinste Quadrate) Zeit ~ Mahlgrad
@@ -616,20 +586,13 @@
       '<text x="' + (L - 6) + '" y="' + (y(25) + 4).toFixed(1) + '" text-anchor="end" font-size="11" fill="var(--muted)">25</text>' +
       line + dots + labels + "</svg>";
     box.innerHTML = ctrl + '<p class="cap">Bezugszeit in s, Zielband 25–30 s. ' +
-      (isGrind ? "Unten: " + axisName + ". Zahl neben dem Punkt: Nr. im Verlauf. Gestrichelt: Trendlinie." : "Unten: Nr. im Verlauf. Die Linie bricht bei einem Wechsel des Mahlkonus ab.") + "</p>" + svg;
+      (isGrind ? "Unten: " + axisName + ". Zahl neben dem Punkt: Nr. im Verlauf. Gestrichelt: Trendlinie." : "Unten: Nr. im Verlauf.") + "</p>" + svg;
   }
 
   $("trend").addEventListener("click", function (e) {
-    var kb = e.target.closest("button[data-konus]");
-    if (kb) {
-      kfilter = kb.getAttribute("data-konus");
-      try { localStorage.setItem(kkey(), kfilter); } catch (err) {}
-      renderTrend();
-      return;
-    }
     var b = e.target.closest("button[data-axis]");
     if (!b) return;
-    var v = b.getAttribute("data-axis"); axis = v === "grind" || v === "burr" ? v : "nr";
+    var v = b.getAttribute("data-axis"); axis = v === "grind" ? v : "nr";
     try { localStorage.setItem(AXIS_KEY, axis); } catch (err) {}
     renderTrend();
   });
@@ -638,8 +601,6 @@
     var ul = $("list");
     var nr = numbers();
     var ch = chrono();
-    var prevBurr = {};
-    ch.forEach(function (s, i) { prevBurr[s.id] = i ? burrOf(ch[i - 1]) : ""; });
     var sorted = ch.slice().reverse();
     if (!sorted.length) {
       ul.innerHTML = '<li class="empty">Noch kein Bezug gespeichert.</li>';
@@ -653,7 +614,6 @@
         '<div class="shot-top"><span class="shot-bean"><span class="shot-nr" aria-label="Nummer ' + nr[s.id] + '">' + nr[s.id] + '</span>' + esc(s.bean || "Ohne Bohnenname") + '</span><span class="shot-right"><span class="shot-date">' + esc(fmtDate(s.date) + (shotClock(s) ? ", " + shotClock(s) : "")) + '</span><button type="button" class="star' + (s.star ? " on" : "") + '" data-act="star" aria-pressed="' + (s.star ? "true" : "false") + '" aria-label="' + (s.star ? "Markierung entfernen" : "Bezug markieren") + '">' + (s.star ? "⭐️" : "☆") + "</button></span></div>" +
         '<div class="shot-line"><div class="sl-left">' +
         '<span title="Mahlgrad">🎚️ <b>' + esc(s.grind || "–") + "</b></span>" +
-        (s.burr && burrOf(s) !== prevBurr[s.id] ? "<span>K. <b>" + esc(s.burr) + "</b></span>" : "") +
         '</div><div class="sl-right">' +
         (s.mtime != null ? '<span title="Mahlzeit in Sekunden">⏲️ <b>' + trim1(s.mtime) + "</b></span>" : "") +
         '<span title="Input, Mehl rein">🫘 <b>' + trim1(s.dose) + "</b> g</span>" +
@@ -720,7 +680,7 @@
     $("date").value = s.date || today();
     $("clock").value = shotClock(s);
     $("bean").value = s.bean || "";
-    $("grind").value = s.grind || ""; $("burr").value = s.burr || ""; $("mtime").value = s.mtime == null ? "" : s.mtime;
+    $("grind").value = s.grind || ""; $("mtime").value = s.mtime == null ? "" : s.mtime;
     $("dose").value = s.dose == null ? "" : s.dose;
     $("yield").value = s.yld == null ? "" : s.yld;
     $("time").value = s.time == null ? "" : s.time;
@@ -748,7 +708,6 @@
       clock: $("clock").value || "",
       bean: $("bean").value.trim(),
       grind: $("grind").value.trim(),
-      burr: $("burr").value.trim(),
       mtime: num($("mtime").value),
       dose: num($("dose").value),
       yld: num($("yield").value),
@@ -796,7 +755,7 @@
     if (btn.getAttribute("data-act") === "reuse") {
       setSaved(false);
       $("bean").value = s.ex ? "" : s.bean || "";
-      $("grind").value = s.grind || ""; $("burr").value = s.burr || ""; $("mtime").value = s.mtime == null ? "" : s.mtime;
+      $("grind").value = s.grind || ""; $("mtime").value = s.mtime == null ? "" : s.mtime;
       $("dose").value = s.dose == null ? "" : s.dose;
       $("yield").value = s.yld == null ? "" : s.yld;
       $("time").value = ""; $("note").value = ""; setTaste("");
@@ -817,11 +776,11 @@
   /* Export */
   function csv() {
     var nr = numbers();
-    var head = ["Nr", "Datum", "Uhrzeit", "Bohnen", "Mahlgrad", "MSek_s", "Mahlkonus", "Input_g", "Output_g", "Zeit_s", "Verhaeltnis", "Geschmack", "Notiz", "Markiert"];
+    var head = ["Nr", "Datum", "Uhrzeit", "Bohnen", "Mahlgrad", "MSek_s", "Input_g", "Output_g", "Zeit_s", "Verhaeltnis", "Geschmack", "Notiz", "Markiert"];
     function cell(v) { return '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"'; }
     var rows = shots.filter(function (s) { return !s.ex; }).sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; }).map(function (s) {
       var r = ratio(s.dose, s.yld);
-      return [nr[s.id], s.date, shotClock(s), s.bean, s.grind, s.mtime, s.burr, s.dose, s.yld, s.time, r == null ? "" : r.toFixed(2), s.taste, s.note, s.star ? "ja" : ""].map(cell).join(";");
+      return [nr[s.id], s.date, shotClock(s), s.bean, s.grind, s.mtime, s.dose, s.yld, s.time, r == null ? "" : r.toFixed(2), s.taste, s.note, s.star ? "ja" : ""].map(cell).join(";");
     });
     return [head.join(";")].concat(rows).join("\n");
   }
@@ -849,6 +808,7 @@
 
   /* Version und Änderungsprotokoll (neueste zuerst). Bei jeder Änderung hier oben ergänzen. */
   var CHANGELOG = [
+    { v: "1.11.1", t: "2026-11-22 13:35", x: "Mahlkonus aus der App entfernt (Formular, Verlauf, Grafik, CSV); gespeicherte Konus-Werte gelöscht" },
     { v: "1.11", t: "2026-11-22 08:30", x: "Mehrere Kaffeemühlen mit eigenen Daten, Anleitung als «?», Verlaufszeile mit MG, Konus nur bei vorhandenem Wert" },
     { v: "1.10.2", t: "2026-11-21 15:45", x: "Version neben dem Titel, Protokoll per Tipp darauf, mit Uhrzeit" },
     { v: "1.10.1", t: "2026-11-21 15:23", x: "Neue Versionen kommen beim Öffnen zuverlässiger an" },
@@ -895,7 +855,7 @@
   var renameId = null, armedGr = null;
   function renderHead() { $("grName").textContent = cur().name; $("histGr").textContent = cur().name; }
   function clearForm() {
-    ["bean", "grind", "mtime", "burr", "dose", "yield", "time", "note"].forEach(function (id) { $(id).value = ""; });
+    ["bean", "grind", "mtime", "dose", "yield", "time", "note"].forEach(function (id) { $(id).value = ""; });
     $("date").value = today();
     $("clock").value = nowClock();
     setTaste("");
@@ -909,7 +869,6 @@
     $("bean").value = s.bean || "";
     $("grind").value = s.grind || "";
     $("mtime").value = s.mtime == null ? "" : s.mtime;
-    $("burr").value = s.burr || "";
     $("dose").value = s.dose == null ? "" : s.dose;
     $("yield").value = s.yld == null ? "" : s.yld;
     $("note").value = s.note || "";
@@ -920,7 +879,6 @@
     armedDelete = null;
     endEdit();
     prefillLast();
-    loadK();
     updateLive();
     renderAll();
     persist();
@@ -963,7 +921,6 @@
     if (db.grinders.length < 2) return;
     var wasCurrent = db.current === id;
     db.grinders = db.grinders.filter(function (g) { return g.id !== id; });
-    try { localStorage.removeItem(KEY + "-konus-" + id); } catch (e) {}
     if (wasCurrent) { db.current = db.grinders[0].id; activate(); } else { persist(); }
     renderGrinders();
   }
@@ -1012,7 +969,7 @@
     if (v !== this.value) this.value = v;
   });
   $("form").addEventListener("input", function () { if (saved) setSaved(false); });
-  ["grind", "burr"].forEach(function (id) {
+  ["grind"].forEach(function (id) {
     $(id).addEventListener("input", function () {
       var v = this.value.replace(/\D/g, "");
       if (v !== this.value) this.value = v;
