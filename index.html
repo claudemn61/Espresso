@@ -78,8 +78,7 @@
   .col-mill { background: rgba(147, 196, 125, 0.10); border: 1px solid rgba(147, 196, 125, 0.28); }
   .col-shot { background: rgba(229, 128, 106, 0.10); border: 1px solid rgba(229, 128, 106, 0.28); }
   .col .btn { padding-left: 8px; padding-right: 8px; white-space: nowrap; }
-  .field.blue label { color: #8fb8e8; }
-  .field.blue input { background: rgba(110, 160, 225, 0.16); border-color: rgba(110, 160, 225, 0.55); }
+  .io { color: #8fb8e8; font-size: 14px; font-weight: 700; line-height: 1.2; }
   .field.wide { grid-column: 1 / -1; }
   label, .label { font-size: 13px; color: var(--muted); font-weight: 500; }
   input, textarea {
@@ -233,7 +232,8 @@
       </div>
       <div class="cols">
         <div class="col col-mill">
-          <div class="field blue">
+          <div class="field">
+            <span class="io">Input</span>
             <label for="dose">Mahlmenge (g)</label>
             <input id="dose" type="text" inputmode="decimal" placeholder="18">
           </div>
@@ -247,7 +247,8 @@
           </div>
         </div>
         <div class="col col-shot">
-          <div class="field blue">
+          <div class="field">
+            <span class="io">Output</span>
             <label for="yield">Kaffeemenge (g)</label>
             <input id="yield" type="text" inputmode="decimal" placeholder="36">
           </div>
