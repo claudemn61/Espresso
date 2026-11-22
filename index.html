@@ -607,7 +607,7 @@
         '<div class="shot-top"><span class="shot-bean"><span class="shot-nr" aria-label="Nummer ' + nr[s.id] + '">' + nr[s.id] + '</span>' + esc(s.bean || "Ohne Bohnenname") + '</span><span class="shot-date">' + esc(fmtDate(s.date)) + "</span></div>" +
         '<div class="shot-line">' +
         '<span title="Mahlgrad">🎚️ <b>' + esc(s.grind || "–") + "</b></span>" +
-        (s.mtime != null ? "<span>M.sek. <b>" + trim1(s.mtime) + "</b></span>" : "") +
+        (s.mtime != null ? '<span title="Mahlzeit in Sekunden">⏲️ <b>' + trim1(s.mtime) + "</b></span>" : "") +
         (s.burr ? "<span>K. <b>" + esc(s.burr) + "</b></span>" : "") +
         '<span title="Input, Mehl rein">🫘 <b>' + trim1(s.dose) + "</b> g</span>" +
         '<span title="Output, Kaffee raus">☕️ <b>' + trim1(s.yld) + "</b> g</span></div>" +
