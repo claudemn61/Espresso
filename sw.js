@@ -1,4 +1,4 @@
-const CACHE = "espresso-log-1.12.1";
+const CACHE = "espresso-log-1.12.2";
 const SHELL = [
   "./",
   "index.html",

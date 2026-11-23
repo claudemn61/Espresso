@@ -302,6 +302,7 @@
     <div class="card-head"><h2 id="histTitle"><button type="button" class="fold" id="histToggle" aria-expanded="true" aria-controls="histBody">Verlauf <span class="hist-gr" id="histGr"></span><span class="chev" aria-hidden="true">▾</span></button></h2></div>
     <div id="histBody">
       <div class="trend" id="trend"></div>
+      <div class="trend" id="grid"></div>
       <ul class="list" id="list"></ul>
     </div>
   </section>
@@ -560,6 +561,57 @@
     $("best").innerHTML = '<div class="best-title">Beste Einstellung bisher (Mahlgrad · Mahldauer · Zeit)</div>' + rows;
   }
 
+  // Raster: Bezugdauer (Zahl und Farbe) je Mahlgrad (unten) und Mahlmenge (links)
+  function renderGrid() {
+    var box = $("grid");
+    var data = chrono().filter(function (s) {
+      return s.time != null && s.dose != null && num(s.grind) != null && (kind === "all" || kindOf(s) === kind);
+    });
+    if (!data.length) {
+      box.innerHTML = '<p class="cap">Raster: braucht Bezüge mit Mahlgrad, Mahlmenge und Zeit.</p>';
+      return;
+    }
+    var gmin = Infinity, gmax = -Infinity, doseSeen = {};
+    data.forEach(function (s) {
+      var g = Math.round(num(s.grind));
+      if (g < gmin) gmin = g; if (g > gmax) gmax = g;
+      doseSeen[String(+s.dose.toFixed(1))] = 1;
+    });
+    var MAXC = 14;
+    if (gmax - gmin + 1 > MAXC) gmin = gmax - MAXC + 1;
+    var cols = gmax - gmin + 1;
+    var doses = Object.keys(doseSeen).map(Number).sort(function (a, b) { return b - a; });
+    var cell = {};
+    data.forEach(function (s) {
+      var g = Math.round(num(s.grind));
+      if (g < gmin) return;
+      cell[g + "|" + (+s.dose.toFixed(1))] = s;   // bei mehreren Bezügen im Feld zählt der neueste
+    });
+    var W = 320, L = 34, R = 8, T = 6, B = 24;
+    var cw = (W - L - R) / cols, ch = 34;
+    var H = T + ch * doses.length + B;
+    var out = "";
+    doses.forEach(function (d, r) {
+      out += '<text x="' + (L - 6) + '" y="' + (T + ch * r + ch / 2 + 4) + '" text-anchor="end" font-size="11" fill="var(--muted)">' + trim1(d) + "</text>";
+      for (var c = 0; c < cols; c++) {
+        var g = gmin + c, s = cell[g + "|" + d];
+        var x = L + cw * c, y = T + ch * r;
+        if (s) {
+          var col = timeClass(s.time) === "good" ? "var(--good)" : timeClass(s.time) === "near" ? "var(--near)" : "var(--off)";
+          out += '<rect x="' + (x + 1).toFixed(1) + '" y="' + (y + 1) + '" width="' + (cw - 2).toFixed(1) + '" height="' + (ch - 2) + '" rx="5" fill="' + col + '" fill-opacity="0.32" stroke="' + col + '" stroke-width="1.5"/>' +
+            '<text x="' + (x + cw / 2).toFixed(1) + '" y="' + (y + ch / 2 + 4) + '" text-anchor="middle" font-size="12" font-weight="700" fill="var(--text)">' + fmt(s.time, 0) + "</text>";
+        } else {
+          out += '<rect x="' + (x + 1).toFixed(1) + '" y="' + (y + 1) + '" width="' + (cw - 2).toFixed(1) + '" height="' + (ch - 2) + '" rx="5" fill="none" stroke="var(--line)" stroke-width="1" stroke-dasharray="2 3"/>';
+        }
+      }
+    });
+    for (var c2 = 0; c2 < cols; c2++) {
+      out += '<text x="' + (L + cw * c2 + cw / 2).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="11" fill="var(--text)">' + (gmin + c2) + "</text>";
+    }
+    box.innerHTML = '<p class="cap">Raster: Bezugdauer in s. Unten: Mahlgrad (MG). Links: Mahlmenge in g. Grün = Zielband 25–30 s.</p>' +
+      '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Raster der Bezugdauer nach Mahlgrad und Mahlmenge">' + out + "</svg>";
+  }
+
   function renderTrend() {
     var nr = numbers();
     var box = $("trend");
@@ -671,6 +723,7 @@
       kind = kb.getAttribute("data-kind");
       try { localStorage.setItem(KIND_KEY, kind); } catch (err) {}
       renderTrend();
+      renderGrid();
       renderList();
       return;
     }
@@ -720,7 +773,7 @@
   }
 
   function renderAll() {
-    renderHead(); renderBeans(); renderBest(); renderTrend(); renderList();
+    renderHead(); renderBeans(); renderBest(); renderTrend(); renderGrid(); renderList();
   }
 
   function setTaste(v) {
@@ -899,6 +952,7 @@
 
   /* Version und Änderungsprotokoll (neueste zuerst). Bei jeder Änderung hier oben ergänzen. */
   var CHANGELOG = [
+    { v: "1.12.2", t: "2026-11-23 14:30", x: "Zusätzliche Grafik: Raster Bezugdauer nach Mahlgrad und Mahlmenge" },
     { v: "1.12.1", t: "2026-11-23 13:55", x: "Verlauf: 1 oder 2 (Einzel/Doppel) oben rechts, Stern entfernt, Nummer als Favorit-Knopf (ausgefüllt = Favorit)" },
     { v: "1.12", t: "2026-11-22 21:03", x: "Oben: beste bisherige Einstellung (Mahlgrad, Mahldauer) für Einzel und Doppel; Verhältnis unter die Eingabekacheln" },
     { v: "1.11.3", t: "2026-11-22 19:31", x: "Eingabekacheln spaltenweise gruppiert (Mühle grün, Bezug rot), Input/Output blau, neue Reihenfolge" },
