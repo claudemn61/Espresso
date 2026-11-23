@@ -707,9 +707,10 @@
       gmin = Math.min.apply(null, gs); gmax = Math.max.apply(null, gs);
       gmin = Math.floor(gmin); gmax = Math.ceil(gmax);
       if (gmax === gmin) { gmin -= 1; gmax += 1; }
-      var range = gmax - gmin;
-      var step = range <= 8 ? 1 : range <= 16 ? 2 : range <= 40 ? 5 : 10;
-      for (var t = Math.ceil(gmin / step) * step; t <= gmax + 1e-9; t += step) ticks.push(t);
+      // Beschriftung nur bei den im Verlauf benutzten Werten
+      var seenT = {};
+      gs.forEach(function (g) { seenT[+g.toFixed(1)] = 1; });
+      ticks = Object.keys(seenT).map(Number).sort(function (a, b) { return a - b; });
     }
     var PADL = 10, PADR = 24;
     function gx(g) { return L + PADL + (W - L - R - PADL - PADR) * ((g - gmin) / (gmax - gmin)); }
@@ -744,8 +745,14 @@
     }).join("");
     var labels;
     if (isGrind) {
-      labels = ticks.map(function (t) {
-        return '<text x="' + gx(t).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="11" fill="var(--text)">' + t + "</text>";
+      var lastX = -1e9;
+      labels = ticks.filter(function (t) {
+        var xx = gx(t);
+        if (xx - lastX < 16) return false;   // zu dicht: Beschriftung weglassen
+        lastX = xx;
+        return true;
+      }).map(function (t) {
+        return '<text x="' + gx(t).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="11" fill="var(--text)">' + String(t).replace(".", ",") + "</text>";
       }).join("") + data.map(function (s, i) {
         return '<text x="' + (x(s, i) + 9).toFixed(1) + '" y="' + (y(s.time) + 4).toFixed(1) + '" text-anchor="start" font-size="11" fill="var(--text)">' + nr[s.id] + "</text>";
       }).join("");
