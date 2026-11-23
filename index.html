@@ -98,6 +98,10 @@
     font-variant-numeric: tabular-nums;
   }
   select { width: 100%; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 12px 12px; min-height: 46px; font-variant-numeric: tabular-nums; }
+  .free-row { display: flex; gap: 6px; }
+  .free-row input { flex: 1; min-width: 0; }
+  .free-row .btn { padding-left: 10px; padding-right: 10px; }
+  select[hidden] { display: none; }
   textarea { resize: vertical; min-height: 64px; }
   input:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid var(--crema); outline-offset: 2px; }
   input[type="date"] { appearance: none; -webkit-appearance: none; }
@@ -255,6 +259,10 @@
           <div class="field">
             <label for="grind">Mahlgrad</label>
             <select id="grind" aria-label="Mahlgrad"></select>
+            <div class="free-row" id="grindFreeRow" hidden>
+              <input id="grindFree" type="text" inputmode="decimal" placeholder="z. B. 12,5" aria-label="Mahlgrad frei eingeben">
+              <button type="button" class="btn small" id="grindList">Liste</button>
+            </div>
           </div>
           <div class="field">
             <label for="mtime">Mahldauer (s)</label>
@@ -1074,16 +1082,42 @@
   (function () {
     var o = '<option value="">–</option>';
     for (var i = 1; i <= 60; i++) o += '<option value="' + i + '">' + i + "</option>";
+    o += '<option value="__free">Frei eingeben …</option>';
     $("grind").innerHTML = o;
   })();
-  function setGrind(v) {
-    v = v == null ? "" : String(v).trim();
+  // Wert setzen (Option bei Bedarf ergänzen), ohne die Anzeige umzuschalten
+  function setGrindValue(v) {
     var sel = $("grind");
     if (v && !Array.prototype.some.call(sel.options || [], function (o) { return o.value === v; })) {
       sel.innerHTML += '<option value="' + esc(v) + '">' + esc(v) + "</option>";
     }
     sel.value = v;
   }
+  // Liste oder freies Feld je nach Wert anzeigen (Werte ausserhalb 1–60 oder mit Dezimalstellen: frei)
+  function setGrind(v) {
+    v = v == null ? "" : String(v).trim();
+    var custom = !!v && !/^([1-9]|[1-5]\d|60)$/.test(v);
+    setGrindValue(v);
+    $("grind").hidden = custom;
+    $("grindFreeRow").hidden = !custom;
+    $("grindFree").value = custom ? v.replace(".", ",") : "";
+  }
+  $("grind").addEventListener("change", function () {
+    if (this.value !== "__free") return;
+    setGrindValue("");
+    this.hidden = true;
+    $("grindFreeRow").hidden = false;
+    $("grindFree").value = "";
+    $("grindFree").focus();
+  });
+  $("grindFree").addEventListener("input", function () {
+    var v = this.value.replace(/[^0-9.,]/g, "");
+    if (v !== this.value) this.value = v;
+    setGrindValue(v.replace(",", ".").replace(/^\.|\.$/g, ""));
+  });
+  $("grindList").addEventListener("click", function () {
+    setGrind($("grind").value && /^([1-9]|[1-5]\d|60)$/.test($("grind").value) ? $("grind").value : "");
+  });
   (function () {
     var o = '<option value="">–</option><option value="auto">auto</option>';
     for (var i = 2; i <= 80; i++) { var v = String(i / 2); o += '<option value="' + v + '">' + v.replace(".", ",") + "</option>"; }
@@ -1109,6 +1143,7 @@
   setInterval(liveStamp, 20000);
   function clearForm() {
     ["bean", "grind", "mtime", "dose", "yield", "time", "note"].forEach(function (id) { $(id).value = ""; });
+    setGrind("");
     liveStamp();
     setTaste("");
     setSaved(false);
@@ -1217,12 +1252,6 @@
   });
 
   $("form").addEventListener("input", function () { if (saved) setSaved(false); });
-  ["grind"].forEach(function (id) {
-    $(id).addEventListener("input", function () {
-      var v = this.value.replace(/\D/g, "");
-      if (v !== this.value) this.value = v;
-    });
-  });
 
   prefillLast();
   updateLive(); renderAll();
