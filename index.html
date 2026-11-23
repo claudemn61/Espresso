@@ -561,7 +561,8 @@
     $("best").innerHTML = '<div class="best-title">Beste Einstellung bisher (Mahlgrad · Mahldauer · Zeit)</div>' + rows;
   }
 
-  // Raster: Bezugdauer (Zahl und Farbe) je Mahlgrad (unten) und Mahlmenge (links)
+  // Raster: Bezugdauer (Zahl und Farbe) je Mahlgrad (unten) und Mahlmenge (links).
+  // Mehrere Bezüge im selben Feld: alle Werte (älteste zuerst), Schrift passt sich dem Platz an.
   function renderGrid() {
     var box = $("grid");
     var data = chrono().filter(function (s) {
@@ -574,41 +575,77 @@
     var gmin = Infinity, gmax = -Infinity, doseSeen = {};
     data.forEach(function (s) {
       var g = Math.round(num(s.grind));
-      if (g < gmin) gmin = g; if (g > gmax) gmax = g;
+      if (g < gmin) gmin = g;
+      if (g > gmax) gmax = g;
       doseSeen[String(+s.dose.toFixed(1))] = 1;
     });
     var MAXC = 14;
     if (gmax - gmin + 1 > MAXC) gmin = gmax - MAXC + 1;
     var cols = gmax - gmin + 1;
     var doses = Object.keys(doseSeen).map(Number).sort(function (a, b) { return b - a; });
-    var cell = {};
+    var cell = {}, maxN = 1;
     data.forEach(function (s) {
       var g = Math.round(num(s.grind));
       if (g < gmin) return;
-      cell[g + "|" + (+s.dose.toFixed(1))] = s;   // bei mehreren Bezügen im Feld zählt der neueste
+      var k = g + "|" + (+s.dose.toFixed(1));
+      (cell[k] = cell[k] || []).push(s);
+      if (cell[k].length > maxN) maxN = cell[k].length;
     });
     var W = 320, L = 34, R = 8, T = 6, B = 24;
-    var cw = (W - L - R) / cols, ch = 34;
+    var cw = (W - L - R) / cols, ch = maxN >= 5 ? 64 : maxN >= 3 ? 50 : maxN === 2 ? 40 : 34;
     var H = T + ch * doses.length + B;
+    function colorOf(t) {
+      var c = timeClass(t);
+      return c === "good" ? "var(--good)" : c === "near" ? "var(--near)" : "var(--off)";
+    }
+    // Schrift und Zeilen so wählen, dass alle n Werte ins Feld passen
+    function layout(vals) {
+      var n = vals.length, fs = 12, lines, perLine;
+      for (fs = 12; fs >= 6; fs -= 0.5) {
+        var wv = vals.reduce(function (m, v) { return Math.max(m, v.length); }, 1) * 0.62 * fs + 0.45 * fs;
+        perLine = Math.max(1, Math.floor((cw - 4 + 0.45 * fs) / wv));
+        lines = Math.floor((ch - 4) / (fs * 1.15));
+        if (lines >= 1 && lines * perLine >= n) break;
+      }
+      fs = Math.max(6, fs);
+      lines = Math.max(1, Math.floor((ch - 4) / (fs * 1.15)));
+      perLine = Math.max(1, Math.ceil(n / lines));
+      var rows = [];
+      for (var i = 0; i < n; i += perLine) rows.push(i);
+      return { fs: fs, perLine: perLine, nrows: Math.ceil(n / perLine) };
+    }
     var out = "";
     doses.forEach(function (d, r) {
-      out += '<text x="' + (L - 6) + '" y="' + (T + ch * r + ch / 2 + 4) + '" text-anchor="end" font-size="11" fill="var(--muted)">' + trim1(d) + "</text>";
+      var y = T + ch * r;
+      out += '<text x="' + (L - 6) + '" y="' + (y + ch / 2 + 4) + '" text-anchor="end" font-size="11" fill="var(--muted)">' + trim1(d) + "</text>";
       for (var c = 0; c < cols; c++) {
-        var g = gmin + c, s = cell[g + "|" + d];
-        var x = L + cw * c, y = T + ch * r;
-        if (s) {
-          var col = timeClass(s.time) === "good" ? "var(--good)" : timeClass(s.time) === "near" ? "var(--near)" : "var(--off)";
-          out += '<rect x="' + (x + 1).toFixed(1) + '" y="' + (y + 1) + '" width="' + (cw - 2).toFixed(1) + '" height="' + (ch - 2) + '" rx="5" fill="' + col + '" fill-opacity="0.32" stroke="' + col + '" stroke-width="1.5"/>' +
-            '<text x="' + (x + cw / 2).toFixed(1) + '" y="' + (y + ch / 2 + 4) + '" text-anchor="middle" font-size="12" font-weight="700" fill="var(--text)">' + fmt(s.time, 0) + "</text>";
-        } else {
-          out += '<rect x="' + (x + 1).toFixed(1) + '" y="' + (y + 1) + '" width="' + (cw - 2).toFixed(1) + '" height="' + (ch - 2) + '" rx="5" fill="none" stroke="var(--line)" stroke-width="1" stroke-dasharray="2 3"/>';
+        var g = gmin + c, arr = cell[g + "|" + d], x = L + cw * c;
+        var box1 = 'x="' + (x + 1).toFixed(1) + '" y="' + (y + 1) + '" width="' + (cw - 2).toFixed(1) + '" height="' + (ch - 2) + '" rx="5"';
+        if (!arr) {
+          out += "<rect " + box1 + ' fill="none" stroke="var(--line)" stroke-width="1" stroke-dasharray="2 3"/>';
+          continue;
+        }
+        if (arr.length === 1) {
+          var col = colorOf(arr[0].time);
+          out += "<rect " + box1 + ' fill="' + col + '" fill-opacity="0.32" stroke="' + col + '" stroke-width="1.5"/>' +
+            '<text x="' + (x + cw / 2).toFixed(1) + '" y="' + (y + ch / 2 + 4) + '" text-anchor="middle" font-size="12" font-weight="700" fill="var(--text)">' + fmt(arr[0].time, 0) + "</text>";
+          continue;
+        }
+        var vals = arr.map(function (s) { return fmt(s.time, 0); });
+        var lo = layout(vals);
+        var lh = lo.fs * 1.15, top = y + (ch - lh * lo.nrows) / 2 + lo.fs * 0.9;
+        out += "<rect " + box1 + ' fill="var(--text)" fill-opacity="0.07" stroke="var(--muted)" stroke-width="1.5"/>';
+        for (var rr = 0; rr < lo.nrows; rr++) {
+          var part = arr.slice(rr * lo.perLine, (rr + 1) * lo.perLine);
+          out += '<text x="' + (x + cw / 2).toFixed(1) + '" y="' + (top + rr * lh).toFixed(1) + '" text-anchor="middle" font-size="' + lo.fs + '" font-weight="700">' +
+            part.map(function (s, i) { return '<tspan fill="' + colorOf(s.time) + '">' + fmt(s.time, 0) + "</tspan>" + (i < part.length - 1 ? '<tspan fill="var(--muted)"> </tspan>' : ""); }).join("") + "</text>";
         }
       }
     });
     for (var c2 = 0; c2 < cols; c2++) {
       out += '<text x="' + (L + cw * c2 + cw / 2).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="11" fill="var(--text)">' + (gmin + c2) + "</text>";
     }
-    box.innerHTML = '<p class="cap">Raster: Bezugdauer in s. Unten: Mahlgrad (MG). Links: Mahlmenge in g. Grün = Zielband 25–30 s.</p>' +
+    box.innerHTML = '<p class="cap">Raster: Bezugdauer in s. Unten: Mahlgrad (MG). Links: Mahlmenge in g. Mehrere Bezüge im Feld: alle Werte, älteste zuerst. Zahl grün = Zielband 25–30 s.</p>' +
       '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Raster der Bezugdauer nach Mahlgrad und Mahlmenge">' + out + "</svg>";
   }
 
