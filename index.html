@@ -586,10 +586,10 @@
     var data = isGrind
       ? all.filter(function (s) { return gv(s) != null; }).slice(-60)
       : all.slice(-40);
-    if (data.length < 2) {
+    if (data.length < 1) {
       box.innerHTML = ctrl + '<p class="cap">' + (isGrind
-        ? "Für diese Ansicht braucht es mindestens zwei Bezüge mit " + axisName + " und Zeit."
-        : "Bezugszeit je Bezug (mindestens zwei Einträge nötig)") + "</p>";
+        ? "Für diese Ansicht braucht es mindestens einen Bezug mit " + axisName + " und Zeit."
+        : "Bezugszeit je Bezug (mindestens ein Eintrag mit Zeit nötig)") + "</p>";
       return;
     }
     var W = 320, H = 150, L = 30, R = 10, T = 14, B = 26;
@@ -611,14 +611,14 @@
     var PADL = 10, PADR = 24;
     function gx(g) { return L + PADL + (W - L - R - PADL - PADR) * ((g - gmin) / (gmax - gmin)); }
     function x(s, i) {
-      return isGrind ? gx(gv(s)) : L + (W - L - R) * (i / (data.length - 1));
+      return isGrind ? gx(gv(s)) : L + (W - L - R) * (data.length > 1 ? i / (data.length - 1) : 0.5);
     }
     function colorOf(t) {
       var c = timeClass(t);
       return c === "good" ? "var(--good)" : c === "near" ? "var(--near)" : "var(--off)";
     }
     var line = "";
-    if (!isGrind) {
+    if (!isGrind && data.length > 1) {
       line = '<polyline points="' + data.map(function (s, i) {
         return x(s, i).toFixed(1) + "," + y(s.time).toFixed(1);
       }).join(" ") + '" fill="none" stroke="var(--crema)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
