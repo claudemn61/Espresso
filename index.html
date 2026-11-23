@@ -705,14 +705,13 @@
     if (isGrind) {
       var gs = data.map(function (s) { return gv(s); });
       gmin = Math.min.apply(null, gs); gmax = Math.max.apply(null, gs);
-      gmin = Math.floor(gmin); gmax = Math.ceil(gmax);
       if (gmax === gmin) { gmin -= 1; gmax += 1; }
       // Beschriftung nur bei den im Verlauf benutzten Werten
       var seenT = {};
       gs.forEach(function (g) { seenT[+g.toFixed(1)] = 1; });
       ticks = Object.keys(seenT).map(Number).sort(function (a, b) { return a - b; });
     }
-    var PADL = 10, PADR = 24;
+    var PADL = 8, PADR = 8;
     function gx(g) { return L + PADL + (W - L - R - PADL - PADR) * ((g - gmin) / (gmax - gmin)); }
     function x(s, i) {
       return isGrind ? gx(gv(s)) : L + (W - L - R) * (data.length > 1 ? i / (data.length - 1) : 0.5);
@@ -754,7 +753,8 @@
       }).map(function (t) {
         return '<text x="' + gx(t).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="11" fill="var(--text)">' + String(t).replace(".", ",") + "</text>";
       }).join("") + data.map(function (s, i) {
-        return '<text x="' + (x(s, i) + 9).toFixed(1) + '" y="' + (y(s.time) + 4).toFixed(1) + '" text-anchor="start" font-size="11" fill="var(--text)">' + nr[s.id] + "</text>";
+        var px = x(s, i), left = px > W - R - 26;   // ganz rechts: Nummer links vom Punkt
+        return '<text x="' + (left ? px - 9 : px + 9).toFixed(1) + '" y="' + (y(s.time) + 4).toFixed(1) + '" text-anchor="' + (left ? "end" : "start") + '" font-size="11" fill="var(--text)">' + nr[s.id] + "</text>";
       }).join("");
     } else {
       var lstep = Math.ceil(data.length / 14);
