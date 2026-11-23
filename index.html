@@ -254,7 +254,7 @@
           </div>
           <div class="field">
             <label for="mtime">Mahldauer (s)</label>
-            <input id="mtime" type="text" inputmode="decimal" placeholder="7,5">
+            <select id="mtime" aria-label="Mahldauer in Sekunden"></select>
           </div>
         </div>
         <div class="col col-shot">
@@ -399,7 +399,7 @@
     var n = parseFloat(String(v).replace(",", "."));
     return isFinite(n) ? n : null;
   }
-  function trim1(n) { return n == null ? "–" : String(+n.toFixed(1)); }
+  function trim1(n) { return n == null ? "–" : typeof n === "string" ? n : String(+n.toFixed(1)); }
   function fmt(n, d) { return n == null ? "–" : n.toFixed(d == null ? 1 : d); }
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
@@ -551,7 +551,7 @@
       var s = bestFor(k[0]);
       return '<div class="best-row"><span class="best-kind">' + k[1] + "</span>" + (s
         ? '<span class="best-vals"><span title="Mahlgrad">🎚️ <b>' + esc(s.grind) + "</b></span>" +
-          '<span title="Mahldauer in Sekunden">⏲️ <b>' + (s.mtime != null ? trim1(s.mtime) + " s" : "–") + "</b></span>" +
+          '<span title="Mahldauer in Sekunden">⏲️ <b>' + (s.mtime == null ? "–" : s.mtime === "auto" ? "auto" : trim1(s.mtime) + " s") + "</b></span>" +
           '<span class="' + timeClass(s.time) + '" title="Bezugdauer in Sekunden">⏱️ <b>' + fmt(s.time, 0) + " s</b></span></span>"
         : '<span class="best-vals">noch kein Bezug</span>') + "</div>";
     }).join("");
@@ -762,7 +762,7 @@
     $("clock").value = shotClock(s);
     showStamp();
     $("bean").value = s.bean || "";
-    setGrind(s.grind); $("mtime").value = s.mtime == null ? "" : s.mtime;
+    setGrind(s.grind); setMtime(s.mtime);
     $("dose").value = s.dose == null ? "" : s.dose;
     $("yield").value = s.yld == null ? "" : s.yld;
     $("time").value = s.time == null ? "" : s.time;
@@ -791,7 +791,7 @@
       clock: $("clock").value || "",
       bean: $("bean").value.trim(),
       grind: $("grind").value.trim(),
-      mtime: num($("mtime").value),
+      mtime: $("mtime").value === "auto" ? "auto" : num($("mtime").value),
       dose: num($("dose").value),
       yld: num($("yield").value),
       time: num($("time").value),
@@ -838,7 +838,7 @@
     if (btn.getAttribute("data-act") === "reuse") {
       setSaved(false);
       $("bean").value = s.ex ? "" : s.bean || "";
-      setGrind(s.grind); $("mtime").value = s.mtime == null ? "" : s.mtime;
+      setGrind(s.grind); setMtime(s.mtime);
       $("dose").value = s.dose == null ? "" : s.dose;
       $("yield").value = s.yld == null ? "" : s.yld;
       $("time").value = ""; $("note").value = ""; setTaste("");
@@ -965,6 +965,19 @@
     }
     sel.value = v;
   }
+  (function () {
+    var o = '<option value="">–</option><option value="auto">auto</option>';
+    for (var i = 2; i <= 80; i++) { var v = String(i / 2); o += '<option value="' + v + '">' + v.replace(".", ",") + "</option>"; }
+    $("mtime").innerHTML = o;
+  })();
+  function setMtime(v) {
+    v = v == null ? "" : String(v).trim();
+    var sel = $("mtime");
+    if (v && !Array.prototype.some.call(sel.options || [], function (o) { return o.value === v; })) {
+      sel.innerHTML += '<option value="' + esc(v) + '">' + esc(v.replace(".", ",")) + "</option>";
+    }
+    sel.value = v;
+  }
   function renderHead() { $("grName").textContent = cur().name; $("histGr").textContent = cur().name; }
   function showStamp() {
     var d = $("date").value, c = $("clock").value;
@@ -988,7 +1001,7 @@
     var s = real[real.length - 1];
     $("bean").value = s.bean || "";
     setGrind(s.grind);
-    $("mtime").value = s.mtime == null ? "" : s.mtime;
+    setMtime(s.mtime);
     $("dose").value = s.dose == null ? "" : s.dose;
     $("yield").value = s.yld == null ? "" : s.yld;
     $("note").value = s.note || "";
@@ -1084,10 +1097,6 @@
     closeSheet("grSheet");
   });
 
-  $("mtime").addEventListener("input", function () {
-    var v = this.value.replace(/[^0-9.,]/g, "");
-    if (v !== this.value) this.value = v;
-  });
   $("form").addEventListener("input", function () { if (saved) setSaved(false); });
   ["grind"].forEach(function (id) {
     $(id).addEventListener("input", function () {
