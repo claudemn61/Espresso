@@ -98,9 +98,10 @@
     font-variant-numeric: tabular-nums;
   }
   select { width: 100%; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 12px 12px; min-height: 46px; font-variant-numeric: tabular-nums; }
-  .free-row { display: flex; gap: 6px; }
-  .free-row input { flex: 1; min-width: 0; }
-  .free-row .btn { padding-left: 10px; padding-right: 10px; }
+  .grind-row { display: flex; align-items: center; gap: 6px; }
+  .grind-row select, .grind-row input { flex: 1; min-width: 0; width: auto; }
+  .grind-row .chip { flex: 0 0 auto; }
+  input[hidden] { display: none; }
   select[hidden] { display: none; }
   textarea { resize: vertical; min-height: 64px; }
   input:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid var(--crema); outline-offset: 2px; }
@@ -258,11 +259,12 @@
           </div>
           <div class="field">
             <label for="grind">Mahlgrad</label>
-            <select id="grind" aria-label="Mahlgrad"></select>
-            <div class="free-row" id="grindFreeRow" hidden>
-              <input id="grindFree" type="text" inputmode="decimal" placeholder="z. B. 12,5" aria-label="Mahlgrad frei eingeben">
-              <button type="button" class="btn small" id="grindList">Liste</button>
+            <div class="grind-row">
+              <select id="grind" aria-label="Mahlgrad"></select>
+              <input id="grindFree" type="text" inputmode="decimal" placeholder="12,5" aria-label="Mahlgrad frei eingeben" hidden>
+              <button type="button" class="chip small" id="grindList" aria-pressed="true" title="Ausgefüllt: nur Listenwerte. Leer: freie Eingabe">Liste</button>
             </div>
+          </div>
           </div>
           <div class="field">
             <label for="mtime">Mahldauer (s)</label>
@@ -1079,12 +1081,13 @@
     setHist(histOpen);
     try { localStorage.setItem(HIST_KEY, histOpen ? "1" : "0"); } catch (e) {}
   });
-  (function () {
+  var GRIND_RE = /^([1-9]|[1-5]\d|60)$/;
+  function buildGrindOptions() {
     var o = '<option value="">–</option>';
     for (var i = 1; i <= 60; i++) o += '<option value="' + i + '">' + i + "</option>";
-    o += '<option value="__free">Frei eingeben …</option>';
     $("grind").innerHTML = o;
-  })();
+  }
+  buildGrindOptions();
   // Wert setzen (Option bei Bedarf ergänzen), ohne die Anzeige umzuschalten
   function setGrindValue(v) {
     var sel = $("grind");
@@ -1093,30 +1096,46 @@
     }
     sel.value = v;
   }
-  // Liste oder freies Feld je nach Wert anzeigen (Werte ausserhalb 1–60 oder mit Dezimalstellen: frei)
+  // Modus: Liste (Badge ausgefüllt, nur Listenwerte) oder freie Eingabe (Badge leer)
+  var GRIND_MODE_KEY = KEY + "-grindlist";
+  var grindListMode = true;
+  try { grindListMode = localStorage.getItem(GRIND_MODE_KEY) !== "0"; } catch (e) {}
+  function showGrindMode(list) {
+    $("grind").hidden = !list;
+    $("grindFree").hidden = list;
+    $("grindList").setAttribute("aria-pressed", list ? "true" : "false");
+  }
   function setGrind(v) {
     v = v == null ? "" : String(v).trim();
-    var custom = !!v && !/^([1-9]|[1-5]\d|60)$/.test(v);
+    var custom = !!v && !GRIND_RE.test(v);
+    if (!custom && grindListMode) buildGrindOptions();
     setGrindValue(v);
-    $("grind").hidden = custom;
-    $("grindFreeRow").hidden = !custom;
-    $("grindFree").value = custom ? v.replace(".", ",") : "";
+    $("grindFree").value = v.replace(".", ",");
+    showGrindMode(!custom && grindListMode);
   }
-  $("grind").addEventListener("change", function () {
-    if (this.value !== "__free") return;
-    setGrindValue("");
-    this.hidden = true;
-    $("grindFreeRow").hidden = false;
-    $("grindFree").value = "";
-    $("grindFree").focus();
-  });
   $("grindFree").addEventListener("input", function () {
     var v = this.value.replace(/[^0-9.,]/g, "");
     if (v !== this.value) this.value = v;
     setGrindValue(v.replace(",", ".").replace(/^\.|\.$/g, ""));
   });
   $("grindList").addEventListener("click", function () {
-    setGrind($("grind").value && /^([1-9]|[1-5]\d|60)$/.test($("grind").value) ? $("grind").value : "");
+    var toList = $("grind").hidden;
+    grindListMode = toList;
+    try { localStorage.setItem(GRIND_MODE_KEY, toList ? "1" : "0"); } catch (e) {}
+    var cur = $("grind").value;
+    if (toList) {
+      // nur Listenwerte: freien Wert auf die nächste ganze Zahl 1–60 runden
+      var n = parseFloat(cur);
+      var v = cur === "" || isNaN(n) ? "" : String(Math.min(60, Math.max(1, Math.round(n))));
+      buildGrindOptions();
+      setGrindValue(v);
+      $("grindFree").value = v;
+    } else {
+      $("grindFree").value = cur.replace(".", ",");
+    }
+    showGrindMode(toList);
+    if (!toList) $("grindFree").focus();
+    if (saved) setSaved(false);
   });
   (function () {
     var o = '<option value="">–</option><option value="auto">auto</option>';
