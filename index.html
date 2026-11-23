@@ -61,6 +61,8 @@
   .fold .chev { margin-left: auto; color: var(--crema); transition: transform .15s; }
   .fold[aria-expanded="false"] .chev { transform: rotate(-90deg); }
   #histBody[hidden] { display: none; }
+  .trend[hidden] { display: none; }
+  .fold.sub { font-size: 15px; font-weight: 700; color: var(--muted); min-height: 40px; }
   .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 
   .ratio { display: flex; align-items: center; justify-content: space-between; gap: 16px; background: var(--surface-2); border-radius: 14px; padding: 14px 16px; }
@@ -301,7 +303,9 @@
   <section class="card" aria-labelledby="histTitle">
     <div class="card-head"><h2 id="histTitle"><button type="button" class="fold" id="histToggle" aria-expanded="true" aria-controls="histBody">Verlauf <span class="hist-gr" id="histGr"></span><span class="chev" aria-hidden="true">▾</span></button></h2></div>
     <div id="histBody">
+      <button type="button" class="fold sub" id="trendToggle" aria-expanded="true" aria-controls="trend">Grafik Bezugdauer <span class="chev" aria-hidden="true">▾</span></button>
       <div class="trend" id="trend"></div>
+      <button type="button" class="fold sub" id="gridToggle" aria-expanded="true" aria-controls="grid">Raster Mahlgrad / Mahlmenge <span class="chev" aria-hidden="true">▾</span></button>
       <div class="trend" id="grid"></div>
       <ul class="list" id="list"></ul>
     </div>
@@ -1044,6 +1048,21 @@
     $("histBody").hidden = !open;
     $("histToggle").setAttribute("aria-expanded", open ? "true" : "false");
   }
+  // Grafiken einzeln ein- und ausblendbar
+  [["trend", "trendToggle"], ["grid", "gridToggle"]].forEach(function (pair) {
+    var key = KEY + "-show-" + pair[0], open = true;
+    try { open = localStorage.getItem(key) !== "0"; } catch (e) {}
+    function apply() {
+      $(pair[0]).hidden = !open;
+      $(pair[1]).setAttribute("aria-expanded", open ? "true" : "false");
+    }
+    apply();
+    $(pair[1]).addEventListener("click", function () {
+      open = !open;
+      apply();
+      try { localStorage.setItem(key, open ? "1" : "0"); } catch (e) {}
+    });
+  });
   var histOpen = true;
   try { histOpen = localStorage.getItem(HIST_KEY) !== "0"; } catch (e) {}
   setHist(histOpen);
