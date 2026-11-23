@@ -132,6 +132,8 @@
   .shot-nr { display: inline-block; min-width: 30px; text-align: center; margin-right: 8px; padding: 1px 8px; border-radius: 999px; background: transparent; color: var(--crema); border: 1.5px solid var(--crema); font-family: var(--body); font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; vertical-align: 2px; cursor: pointer; line-height: 1.4; }
   .shot-nr.fav { background: var(--crema); color: var(--crema-ink); }
   .shot-right { display: flex; align-items: center; gap: 8px; }
+  .shot-kind.k1 { color: var(--good); border-color: var(--good); }
+  .shot-kind.k2 { color: var(--off); border-color: var(--off); }
   .shot-kind { display: inline-block; min-width: 22px; text-align: center; padding: 0 6px; border-radius: 999px; border: 1px solid var(--line); color: var(--text); font-size: 13px; font-weight: 700; line-height: 1.5; }
   .shot-date { color: var(--muted); font-size: 13px; white-space: nowrap; }
   .head-left { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -692,7 +694,7 @@
       var tc = timeClass(s.time);
       var armed = armedDelete === s.id;
       return '<li class="shot' + (editId === s.id ? " editing" : "") + '" data-id="' + esc(s.id) + '">' +
-        '<div class="shot-top"><span class="shot-bean"><button type="button" class="shot-nr' + (s.star ? " fav" : "") + '" data-act="star" aria-pressed="' + (s.star ? "true" : "false") + '" aria-label="Nummer ' + nr[s.id] + (s.star ? ", Favorit, tippen zum Entfernen" : ", tippen als Favorit markieren") + '">' + nr[s.id] + '</button>' + esc(s.bean || "Ohne Bohnenname") + '</span><span class="shot-right"><span class="shot-date">' + esc(fmtDate(s.date) + (shotClock(s) ? ", " + shotClock(s) : "")) + '</span><span class="shot-kind" title="' + (kindOf(s) === "single" ? "Einzelbezug" : "Doppelbezug") + '">' + (kindOf(s) === "single" ? "1" : "2") + "</span></span></div>" +
+        '<div class="shot-top"><span class="shot-bean"><button type="button" class="shot-nr' + (s.star ? " fav" : "") + '" data-act="star" aria-pressed="' + (s.star ? "true" : "false") + '" aria-label="Nummer ' + nr[s.id] + (s.star ? ", Favorit, tippen zum Entfernen" : ", tippen als Favorit markieren") + '">' + nr[s.id] + '</button>' + esc(s.bean || "Ohne Bohnenname") + '</span><span class="shot-right"><span class="shot-date">' + esc(fmtDate(s.date) + (shotClock(s) ? ", " + shotClock(s) : "")) + '</span><span class="shot-kind ' + (kindOf(s) === "single" ? "k1" : "k2") + '" title="' + (kindOf(s) === "single" ? "Einzelbezug" : "Doppelbezug") + '">' + (kindOf(s) === "single" ? "1" : "2") + "</span></span></div>" +
         '<div class="shot-line"><div class="sl-left">' +
         '<span title="Mahlgrad">🎚️ <b>' + esc(s.grind || "–") + "</b></span>" +
         '</div><div class="sl-right">' +
