@@ -671,6 +671,7 @@
       kind = kb.getAttribute("data-kind");
       try { localStorage.setItem(KIND_KEY, kind); } catch (err) {}
       renderTrend();
+      renderList();
       return;
     }
     var b = e.target.closest("button[data-axis]");
@@ -687,6 +688,11 @@
     var sorted = ch.slice().reverse();
     if (!sorted.length) {
       ul.innerHTML = '<li class="empty">Noch kein Bezug gespeichert.</li>';
+      return;
+    }
+    if (kind !== "all") sorted = sorted.filter(function (s) { return kindOf(s) === kind; });
+    if (!sorted.length) {
+      ul.innerHTML = '<li class="empty">Keine Bezüge dieser Art.</li>';
       return;
     }
     ul.innerHTML = sorted.map(function (s) {
