@@ -585,21 +585,22 @@
       box.innerHTML = '<p class="cap">Raster: braucht Bezüge mit Mahlgrad, Mahlmenge und Zeit.</p>';
       return;
     }
-    var gmin = Infinity, gmax = -Infinity, doseSeen = {};
+    // Spalten = genau die im Verlauf benutzten Mahlgrade (aufsteigend), höchstens 14 (die höchsten)
+    function gkeyOf(s) { return +num(s.grind).toFixed(1); }
+    var gSeen = {}, doseSeen = {};
     data.forEach(function (s) {
-      var g = Math.round(num(s.grind));
-      if (g < gmin) gmin = g;
-      if (g > gmax) gmax = g;
+      gSeen[gkeyOf(s)] = 1;
       doseSeen[String(+s.dose.toFixed(1))] = 1;
     });
     var MAXC = 14;
-    if (gmax - gmin + 1 > MAXC) gmin = gmax - MAXC + 1;
-    var cols = gmax - gmin + 1;
+    var gvals = Object.keys(gSeen).map(Number).sort(function (a, b) { return a - b; });
+    if (gvals.length > MAXC) gvals = gvals.slice(-MAXC);
+    var cols = gvals.length;
     var doses = Object.keys(doseSeen).map(Number).sort(function (a, b) { return b - a; });
     var cell = {}, maxN = 1;
     data.forEach(function (s) {
-      var g = Math.round(num(s.grind));
-      if (g < gmin) return;
+      var g = gkeyOf(s);
+      if (gvals.indexOf(g) < 0) return;
       var k = g + "|" + (+s.dose.toFixed(1));
       (cell[k] = cell[k] || []).push(s);
       if (cell[k].length > maxN) maxN = cell[k].length;
@@ -632,7 +633,7 @@
       var y = T + ch * r;
       out += '<text x="' + (L - 6) + '" y="' + (y + ch / 2 + 4) + '" text-anchor="end" font-size="11" fill="var(--muted)">' + trim1(d) + "</text>";
       for (var c = 0; c < cols; c++) {
-        var g = gmin + c, arr = cell[g + "|" + d], x = L + cw * c;
+        var g = gvals[c], arr = cell[g + "|" + d], x = L + cw * c;
         var box1 = 'x="' + (x + 1).toFixed(1) + '" y="' + (y + 1) + '" width="' + (cw - 2).toFixed(1) + '" height="' + (ch - 2) + '" rx="5"';
         if (!arr) {
           out += "<rect " + box1 + ' fill="none" stroke="var(--line)" stroke-width="1" stroke-dasharray="2 3"/>';
@@ -656,9 +657,9 @@
       }
     });
     for (var c2 = 0; c2 < cols; c2++) {
-      out += '<text x="' + (L + cw * c2 + cw / 2).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="11" fill="var(--text)">' + (gmin + c2) + "</text>";
+      out += '<text x="' + (L + cw * c2 + cw / 2).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="11" fill="var(--text)">' + String(gvals[c2]).replace(".", ",") + "</text>";
     }
-    box.innerHTML = '<p class="cap">Raster: Bezugdauer in s. Unten: Mahlgrad (MG). Links: Mahlmenge in g. Mehrere Bezüge im Feld: alle Werte, älteste zuerst. Zahl grün = Zielband 25–30 s.</p>' +
+    box.innerHTML = '<p class="cap">Raster: Bezugdauer in s. Unten: benutzte Mahlgrade (MG). Links: Mahlmenge in g. Mehrere Bezüge im Feld: alle Werte, älteste zuerst. Zahl grün = Zielband 25–30 s.</p>' +
       '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Raster der Bezugdauer nach Mahlgrad und Mahlmenge">' + out + "</svg>";
   }
 
