@@ -566,12 +566,13 @@
     var rows = [["single", "Einzel"], ["double", "Doppel"]].map(function (k) {
       var s = bestFor(k[0]);
       return '<div class="best-row"><span class="best-kind">' + k[1] + "</span>" + (s
-        ? '<span class="best-vals"><span title="Mahlgrad">🎚️ <b>' + esc(s.grind) + "</b></span>" +
+        ? '<span class="best-vals"><span title="Mahlmenge in Gramm">⚖️ <b>' + (s.dose != null ? trim1(s.dose) + " g" : "–") + "</b></span>" +
+          '<span title="Mahlgrad">🎚️ <b>' + esc(s.grind) + "</b></span>" +
           '<span title="Mahldauer in Sekunden">⏲️ <b>' + (s.mtime == null ? "–" : s.mtime === "auto" ? "auto" : trim1(s.mtime) + " s") + "</b></span>" +
           '<span class="' + timeClass(s.time) + '" title="Bezugdauer in Sekunden">⏱️ <b>' + fmt(s.time, 0) + " s</b></span></span>"
         : '<span class="best-vals">noch kein Bezug</span>') + "</div>";
     }).join("");
-    $("best").innerHTML = '<div class="best-title">Beste Einstellung bisher (Mahlgrad · Mahldauer · Zeit)</div>' + rows;
+    $("best").innerHTML = '<div class="best-title">Beste Einstellung bisher (Mahlmenge · Mahlgrad · Mahldauer · Zeit)</div>' + rows;
   }
 
   // Raster: Bezugdauer (Zahl und Farbe) je Mahlgrad (unten) und Mahlmenge (links).
